@@ -1,5 +1,5 @@
 # Taqueria
-
+\justify
 El problema presentado plantea la representación de 4 taqueros que se encargan de realizar tacos de asada, adobada, lengua, cabeza y suadero (dos taqueros se encargan de realizar asada y suadero, uno se encarga de tripa y cabeza y otro se encarga de los tacos de adobada), un quesadillero, 2 chalanes, un set de fillings y un set de tortillas (que no poseen un límite establecido) los cuales mantienen ciertas relaciones para la resolución de un objetivo (ejemplo, el chalán se encuentra relacionado con aquellos fillings anteriormente mencionados, los cuales permiten que el taquero los agregue a cada taco dependiendo de las especificaciones de determinada orden). 
 
 En base a lo identificado anteriormente es necesario mantener un conjunto de estructuras, en donde se identifican tres puntos de enfoque: los taqueros que comparten un queue, el quesadillero y los taqueros individuales.
