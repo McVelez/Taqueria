@@ -5,3 +5,6 @@ En base a lo identificado anteriormente es necesario mantener un conjunto de est
 
 Por otro lado, es necesario mantener una recolección de todas las órdenes que están siendo procesadas en determinada instancia de tiempo por cualquiera de los taqueros antes descritos y todas las órdenes finalizadas, manteniendo así un recopilación de detalles de cada orden: identificador, las subórdenes que componen a dicha orden, fecha y su estatus.
 Identificamos la importancia de delimitar lo que se considera como una orden grande y pequeña puesto que nos permitirá categorizar e identificar las prioridades que le hemos asignado a cada una de ellas y por lo tanto, la forma en que los procesos se adecuan a ellas.
+
+<dt>justify</dt>
+<dd>Align the elements justified.</dd>
