@@ -12,7 +12,6 @@ CHALAN_WAITING_TIME = {"salsa":15, "cilantro":10, "cebolla":10, "guacamole":20, 
 TAQUERO_WAITING_TIME = {"salsa":0.5, "cilantro":0.5, "cebolla":0.5, "guacamole":0.5, "tortillas":0}
 QUESADILLERO_STACK = 0
 
-
 class taquero:
     def __init__(self, restTime, fan = False, tortillas = 50, stackQuesadillas = 5):
         self.fillings = {"salsa":150, "guacamole":100, "cebolla":200, "cilantro":200}
