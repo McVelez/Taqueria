@@ -1,3 +1,5 @@
+from threading import Thread
+import json
 import queue
 
 class taco:
@@ -5,9 +7,7 @@ class taco:
         self.cantidad = cantidad
         self.duracionPorTaco = duracionPorTaco
         
-
 Q_ordenes = queue.Queue()
-
 
 def checkIfOrderLessThan400(orden):
     sumatoria=0
@@ -25,39 +25,43 @@ def checkMeat(type):
 
 def asignacionQueue(subordenes):
     if(subordenes.meat == "tripa" or subordenes.meat == "cabeza"):
-        #AGREGAR suborden al QUEUE del taquero de tripa y cabeza
+        #AGREGAR suborden al SQS del taquero de tripa y cabeza
+        #SQS
         pass
     if(subordenes.meat == "asada" or subordenes.meat == "suadero"):
-        #AGREGAR suborden al QUEUE compartido de los taqueros de asada 
+        #AGREGAR suborden al SQS de los taqueros de asada
+        #SQS
         pass
     if(subordenes.meat == "adobada"):
+        #AGREGAR suborden al SQS de Adobada
+        #SQS
         pass
 
-def readJsonAndAppendToQueues():
+
+def categorizador(orden, i): # objeto de toda la orden
+    
+    print("ORDEN {0}".format(i))
+
+    pass
+
+joinear= []
+def readJson():
     # pseudocodigo
-    json = getJson() 
+    #json = getJson() 
+    i=0
     for orden in json.orders:
-
-        # Si la orden tiene un total de mas de 400 tacos REJECTED
-        if(checkIfOrderLessThan400() == False):
-            #RECHAZAR
-            pass
-
-        for subordenes in orden:
-            
-            if(checkMeat(subordenes.type) == False):
-                #RECHAZAR
-                pass
-
-            asignacionQueue(subordenes)
-
-            
-
-
+        orden_thread = Thread(target=categorizador, args=(orden,i))
+        i+=1
+        
+        joinear.append(orden_thread)
+        
+        orden_thread.start()
+        categorizador(orden)
 
 def nextOrder(Q_ordenes):
     return Q_ordenes.get()
 #
 
-
+if __name__ == "__main__":
+    readJson({'nombre':"tu mama", 'edad':20})
 
