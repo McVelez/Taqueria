@@ -195,7 +195,7 @@ def individualTaqueroMethod(taquero):
 def cookFood(taquero, ingredients):
     for ing in ingredients:
         sleep(TAQUERO_WAITING_TIME[ing]) # Nota: Marco no cree que esto funcione
-    
+    taquero.tacoCounter += 1
     if taquero.tacoCounter == taquero.tacosNeededForRest:
         return True
     return False
