@@ -2,6 +2,7 @@ from threading import Thread
 import json
 import queue
 from time import sleep
+import copy
 
 OrdersInProcessDictionary= {}
 STATES = ["REJECTED","READY","RUNNING","EXIT"]
@@ -18,13 +19,14 @@ queueTripaCabeza = queue.Queue()
 queueQuesadillas = queue.Queue()
 
 class taqueroIndividual:
-    def __init__(self, restTime, fan = False, tortillas = 50, stackQuesadillas = 5):
+    def __init__(self, restTime, tacosNeededForRest, fan = False, tortillas = 50, stackQuesadillas = 5):
         self.fillings = {"salsa":150, "guacamole":100, "cebolla":200, "cilantro":200}
         self.stackQuesadillas = stackQuesadillas
         self.fan = fan
         self.tortillas = tortillas
         self.restTime = restTime
         self.tacoCounter = 0
+        self.tacosNeededForRest = tacosNeededForRest
 
     def activateFan(self):
         self.fan = True
@@ -33,7 +35,8 @@ class taqueroIndividual:
         self.fan = False
 
     def rest(self):
-        sleep(self.restTime)
+        if(self.tacoCounter == 300):
+            sleep(self.restTime)
 
 class queues:
     def __init__(self):
@@ -44,8 +47,8 @@ class queues:
 
 class taquerosShared:
     def __init__(self, restTime1, restTime2):
-        self.taquero1 = taqueroIndividual(restTime1)
-        self.taquero2 = taqueroIndividual(restTime2)
+        self.taquero1 = taqueroIndividual(restTime1, 311)
+        self.taquero2 = taqueroIndividual(restTime2, 313)
         queues.__init__(self)
 
 
@@ -128,6 +131,7 @@ def categorizador(orden,key): # objeto de toda la orden
 
         #print(suborder['part_id'], suborder['type'], suborder['meat'], suborder['quantity'])
         if(suborder['status'] != STATES[0]):
+            #OrdersInProcessDictionary[key][suborder['part_id']] = STATES[0]
             assignToTaqueroQueue(suborder, key)
     
 def globalAssignator(queueNeeded, taqueroInstance):
@@ -156,7 +160,49 @@ def globalAssignator(queueNeeded, taqueroInstance):
             taqueroInstance.QOGE.put(suborder)    
             print("QOGE",taqueroInstance.__dict__['QOGE'].get())
     
+
+cantSubordersInQOGH = 4   
+
+def individualTaqueroMethod(taquero):
+    while(True):
+        QOQ_copy = copy.deepcopy(taquero.QOQ)
+        subordenQ = []
+        while (not QOQ_copy.empty()):
+            subordenQ.append(QOQ_copy.get())
+            taquero.QOQ.get()
+        # acquire( Taquero.QOP )
+        QOP_copy = copy.deepcopy(taquero.QOP)
+        subordenP = []
+        while (not QOP_copy.empty()):
+            subordenP.append(QOP_copy.get())
+            taquero.QOP.get()
+        # release bla
+        
+        if taquero.QOGH.empty is False:
+            for i in range(cantSubordersInQOGH):
+                subordenG = taquero.QOGH.get()
+                
+                for tacos in range(subordenG['quantity']):
+                    rest = cookFood(taquero, subordenG['ingredients'])
+                    if rest:
+                        taquero.rest()
+
+                    
+        
+        # taquero.rest()
     
+
+def cookFood(taquero, ingredients):
+    for ing in ingredients:
+        sleep(TAQUERO_WAITING_TIME[ing]) # Nota: Marco no cree que esto funcione
+    
+    if taquero.tacoCounter == taquero.tacosNeededForRest:
+        return True
+    return False
+
+def sharedTaqueroMethod(Taquero, suborder):
+    pass
+
 
 def chalan():
     
@@ -170,16 +216,18 @@ def readJson(data):
     for orden in data:
         ordenObject = orden['orden'] # es una lista
         OrdersInProcessDictionary[orden['request_id']] = orden
-        orden_thread = Thread(target=categorizador, args=(ordenObject, orden['request_id']))
-        #i+=1  
-        joinear.append(orden_thread)
+        print(OrdersInProcessDictionary)
         
-        orden_thread.start()
+        #orden_thread = Thread(target=categorizador, args=(ordenObject, orden['request_id']))
+        #i+=1  
+        #joinear.append(orden_thread)
+        
+        #orden_thread.start()
         #categorizador(ordenObject, orden['request_id'])
         '''
         OrdersInProcessDictionary[orden['request_id']] = orden
         categorizador(ordenObject, orden['request_id'], i)
-        
+
         '''
 
 def nextOrder(qOrders):
@@ -189,8 +237,8 @@ def cliente(SQS1, SQS2, SQS3):
     pass
 
 instanceQueues = queues()
-taqueroAdobada = taqueroIndividual(3)
-taqueroTripaCabeza = taqueroIndividual(3)
+taqueroAdobada = taqueroIndividual(3, 100)
+taqueroTripaCabeza = taqueroIndividual(3, 100)
 taqueroAsadaSuadero = taquerosShared(9.33, 9.39)
 taqueroAdobada.__dict__.update(instanceQueues.__dict__)
 taqueroTripaCabeza.__dict__.update(instanceQueues.__dict__)
