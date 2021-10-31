@@ -137,7 +137,7 @@ def categorizador(orden,key): # objeto de toda la orden
 
         #print(suborder['part_id'], suborder['type'], suborder['meat'], suborder['quantity'])
         if(suborder['status'] != STATES[0]):
-            OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][ int(suborder['part_id'][-(index):]) ]['quantity']
+            OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['quantity']
             assignToTaqueroQueue(suborder, key)
     
 def globalAssignator(queueNeeded, taqueroInstance):
@@ -171,20 +171,24 @@ cantSubordersInQOGH = 4
 
 def individualTaqueroMethod(taquero):
     while(True):
-        # arreglarlos
-        '''QOQ_copy = copy.deepcopy(taquero.QOQ)
+        # Copiamos el queue a otro espacio de memoria
+        QOQ_copy = copy.deepcopy(taquero.QOQ)
         snapshotQOQ = []
+        # se genera el snapshot al vaciar tnto la copia como el queue original
         while (len(QOQ_copy)>0):
             subor = QOQ_copy.pop() 
             snapshotQOQ.append(subor)
             taquero.QOQ.pop()
+        # se iteran las subordenes del snapshot
         for sub in snapshotQOQ:
+            # indice para identificar a la suborden dentro del diccionario
             index = sub['part_id'].find('-')
+            # llave de la orden a la que pertenece
             key = int(sub['part_id'][:index])
+            # se itera por cada taco en la suborden de quesadillas
             for taco in range(sub['quantity']):
+                # se hace cada taco
                 cookFood(taquero, sub, key, index)
-                print(OrdersInProcessDictionary[key]['orden'][abs(int(sub['part_id'][-(index):]))]['remaining_tacos'])
-            print("")'''
         # acquire( Taquero.QOP )
         '''QOP_copy = copy.copy(taquero.QOP)
         snapshotQOP = []
