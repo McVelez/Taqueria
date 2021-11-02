@@ -8,7 +8,7 @@ from collections import deque
 
 
 OrdersInProcessDictionary= {}
-STATES = ["REJECTED","READY","RUNNING","EXIT"]
+STATES = ["REJECTED","READY","RUNNING","EXIT"] 
 MEATS = ["asada", "adobada", "cabeza", "tripa", "suadero"]
 TYPES = ["taco", "quesadilla"]
 INGREDIENTS = ["salsa", "cilantro", "cebolla", "guacamole"]
@@ -46,7 +46,6 @@ class queues:
         self.QOP = deque()
         self.QOGE = deque()
         self.QOGH = deque()
-        self.QOQ = deque()
 
 class taquerosShared:
     def __init__(self, restTime1, restTime2):
@@ -64,18 +63,25 @@ def checkIfEmpty(suborderList):
     return len(suborderList)==0
 
 def assignToTaqueroQueue(suborder, key):
+
+    indexAd = MEATS.index('adobada')
+    indexAs = MEATS.index('asada')
+    indexTr = MEATS.index('tripa')
+    indexCa = MEATS.index('cabeza')
+    indexSu = MEATS.index('suadero')
+
     # Si carne de tacos de la suborder es tripa o cabeza
-    if(suborder['meat'] == MEATS[3] or suborder['meat'] == MEATS[2]):
+    if(suborder['meat'] == MEATS[indexTr] or suborder['meat'] == MEATS[indexCa]):
         #AGREGAR suborder al queue del taquero de tripa y cabeza
         queueTripaCabeza.append(suborder)
         globalAssignator(queueTripaCabeza, taqueroTripaCabeza)
     # Si carne de tacos de la suborder es asada o suadero    
-    if(suborder['meat'] == MEATS[0] or suborder['meat'] == MEATS[4]):
+    if(suborder['meat'] == MEATS[indexAs] or suborder['meat'] == MEATS[indexSu]):
         #AGREGAR suborder al queue de los taqueros de asada
         queueAsadaSuadero.append(suborder)
         globalAssignator(queueAsadaSuadero, taqueroAsadaSuadero)
     # Si carne de tacos de la suborder es adobada    
-    if(suborder['meat'] == MEATS[1]):
+    if(suborder['meat'] == MEATS[indexAd]):
         #AGREGAR suborder al queue de Adobada
         queueAdobada.append(suborder)
         globalAssignator(queueAdobada, taqueroAdobada)
@@ -145,12 +151,7 @@ def globalAssignator(queueNeeded, taqueroInstance):
     suborder = queueNeeded.pop()
     # enqueue al queue correpondiente del taquero
     # quantity, type
-    # QUESADILLA
-    if(suborder['type'] == TYPES[1]):
-        # ENQUEUE AL QOQ del taquero de tripa y cabeza
-        taqueroInstance.QOQ.append(suborder)
-        #print("QOQ",taqueroInstance.__dict__['QOQ'].pop())
-    # TACOS
+    # TACOS Y QUESADILLAS
     if(suborder['quantity'] <= 25):
         taqueroInstance.QOP.append(suborder)
         #print("QOP",taqueroInstance.__dict__['QOP'].pop())
@@ -175,51 +176,54 @@ def quesadillero():
         if (queueQuesadillas):
             suborden = queueQuesadillas.pop()
             sleep( 20 * suborden['quantity'])
+            # indice para identificar a la suborden dentro del diccionario
+            index = suborden['part_id'].find('-')
+            # llave de la orden a la que pertenece
+            key = int(suborden['part_id'][:index])
+            OrdersInProcessDictionary[key]['orden'][abs(int(suborden['part_id'][-(index):]))]['status'] = STATES[3]
+            # poner estado de suborden como exit
+
+def dispatcher():
+    # Se encargara de unir las subordenes 
+    # out of service 
+    pass
 
 def individualTaqueroMethod(taquero):
     while(True):
-        # NOTA: Esta bien repetir codigo para QOQ y QOP? 
-        # NOTA 2.0 Cuando se regrese una suborden de quesafillas del quesadillero como se meten al QOQ?
+        # NOTA 2.0 Cuando llegue una suborden de quesadillas, se le tratará como taco (poniendole ingredientes y carne)
+        #   y se enviará al quesadillero para que el ponga su quesito y no tenga que regresarlo al tqeuro de nuevo.
         # Copiamos el queue a otro espacio de memoria
-        QOQ_copy = copy.deepcopy(taquero.QOQ)
-        snapshotQOQ = []
+        QOP_copy = copy.deepcopy(taquero.QOP)
+        snapshotQOP = []
         # se genera el snapshot al vaciar tnto la copia como el queue original
         # no olvidar agregar llamada a quesadillero para cuando no haya suficientes
-        while (len(QOQ_copy)>0):
-            subor = QOQ_copy.pop() 
-            snapshotQOQ.append(subor)
-            taquero.QOQ.pop()
+        while (len(QOP_copy)>0):
+            subor = QOP_copy.pop() 
+            snapshotQOP.append(subor)
+            taquero.QOP.pop()
         # se iteran las subordenes del snapshot
-        for sub in snapshotQOQ:
+        snapshotQOP = snapshotQOP[::-1]
+        for sub in snapshotQOP:
             # indice para identificar a la suborden dentro del diccionario
             index = sub['part_id'].find('-')
             # llave de la orden a la que pertenece
             key = int(sub['part_id'][:index])
-            if (sub['quantity'] > taquero.stackQuesadillas):
-                queueQuesadillas.append(sub)
-                OrdersInProcessDictionary[key]['orden'][abs( int(sub['part_id'][-(index):]))]['status'] = STATES[2] # deberia de ser ready or running?
-                continue
+            if (sub['quantity'] <= taquero.stackQuesadillas):
+                # darle las quesadillas
+                taquero.stackQuesadillas -= sub['quantity']
+                taquero.stackQuesadillas += sub['quantity'] # temporal!!!!!!!!!!!!!!!!!
+                # queueQuesadillas.append(sub['quantity'])  quesadillas dispatcher que el va usar IDS y todo eso 
+
             # llamar a pedir las quesadillas que se van a utilizar
             # se itera por cada taco en la suborden de quesadillas
             for taco in range(sub['quantity']):
                 # se hace cada taco
                 cookFood(taquero, sub, key, index)
-                taquero.stackQuesadillas -= 1
+            print(sub['part_id'], "done")
         # acquire( Taquero.QOP )
-        '''QOP_copy = copy.deepcopy(taquero.QOP)
-        snapshotQOP = []
-        while (len(QOP_copy)>0):
-            subor = QOP_copy.pop() 
-            snapshotQOP.append(subor)
-            taquero.QOP.pop()
-        for taco in snapshotQOP:
-            index = sub['part_id'].find('-')
-            key = int(sub['part_id'][:index])
-            for taco in range(sub['quantity']):
-                cookFood(taquero, sub, key, index)'''
         # release bla 
         
-        '''
+        
         for i in range(cantSubordersInQOGH):
             if taquero.QOGH is False:
                 # Logica de preparacion de cada taco de cada suborden grande dentro del QOGH
@@ -232,34 +236,41 @@ def individualTaqueroMethod(taquero):
                 if(OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos'] / cantTacosPorHacer < 2):
                     cantTacosPorHacer = OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos']
 
+                # Por aqui va lo de agregar RUNNING al diccionario de los estados
+      
                 for tacos in range(cantTacosPorHacer): 
                     rest = cookFood(taquero, subordenG, key, index )
                     if rest:
                         taquero.rest()
                 # Logica de actualizacion de diccionario y revision de subordenes grandes completadas
                 if (OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos'] == 0):
-                    OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['status'] = STATES[3]
+                    if subordenG['type'] == TYPES[TYPES.index('quesadilla')]:
+                        queueQuesadillas.append(subordenG)
+                    else:
+                        OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['status'] = STATES[3]
                     if (taquero.QOGE is False):
                         taquero.QOGH.append(taquero.QOGE.pop())
                 else:
-                    taquero.QOGH.append(subordenG)'''
+                    taquero.QOGH.append(subordenG)
         break
     
 
 def cookFood(taquero, suborder, key, index):
-    #for ing in suborder['ingredients']:
-        #sleep(TAQUERO_WAITING_TIME[ing]) 
+    sleep(1)
+    for ing in suborder['ingredients']:
+        sleep(TAQUERO_WAITING_TIME[ing]) 
     taquero.tacoCounter += 1
-    #print(suborder['part_id'])
+    print(suborder['part_id'])
     # hacer menos menos a la suborden de dicccionario en la variable de tacosRestantes
     OrdersInProcessDictionary[key]['orden'][abs( int(suborder['part_id'][-(index):]))]['remaining_tacos'] -=1
 
-def sharedTaqueroMethod(Taquero, suborder):
+def sharedTaqueroMethod(Taquero):
+
     pass
 
 
 def chalan():
-    # este bato va a ser explotado laboralmente
+    # este bato va a ser explotado laboralmente C:
     
     pass
     
