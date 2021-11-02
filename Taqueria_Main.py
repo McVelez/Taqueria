@@ -14,6 +14,7 @@ MEATS = ["asada", "adobada", "cabeza", "tripa", "suadero"]
 TYPES = ["taco", "quesadilla"]
 INGREDIENTS = ["salsa", "cilantro", "cebolla", "guacamole"]
 CHALAN_WAITING_TIME = {"salsa":15, "cilantro":10, "cebolla":10, "guacamole":20, "tortillas":5}
+INGREDIENTS_AT_MAX = {"salsa":150, "cilantro":200, "cebolla":200, "guacamole":100, "tortillas":50}
 TAQUERO_WAITING_TIME = {"salsa":0.5, "cilantro":0.5, "cebolla":0.5, "guacamole":0.5, "tortillas":0}
 QUESADILLERO_STACK = 0
 
@@ -53,7 +54,6 @@ class taquerosShared:
         self.taquero1 = taqueroIndividual(restTime1, 311)
         self.taquero2 = taqueroIndividual(restTime2, 313)
         queues.__init__(self)
-
 
 class taco:
     def __init__(self, quantity, tacoDuration) -> None:
@@ -256,8 +256,18 @@ def individualTaqueroMethod(taquero):
 
 def cookFood(taquero, suborder, key, index):
     sleep(1)
+    
+    while(taquero.tortillas == 0):
+        pass
+    
     for ing in suborder['ingredients']:
-        sleep(TAQUERO_WAITING_TIME[ing]) 
+        while (taquero.fillings[ing] == 0):
+            pass
+        
+        sleep(TAQUERO_WAITING_TIME[ing])
+        taquero.fillings[ing] -= 1
+        
+
     taquero.tacoCounter += 1
     print(suborder['part_id'])
     # hacer menos menos a la suborden de dicccionario en la variable de tacosRestantes
@@ -278,12 +288,33 @@ def sharedTaqueroMethod(Taquero):
     
     pass
 
+#El chalán rellenará primero el cilantro seguido por la cebolla, el guacamole y por último la salsa.
+# checar tortillas < 50
+# tortillas, guacamole, salsa, cebolla, cilantro
+# CHALAN_WAITING_TIME = {"salsa":15, "cilantro":10, "cebolla":10, "guacamole":20, "tortillas":5}
 
-def chalan():
+def chalanArriba():
     # este bato va a ser explotado laboralmente C:
+    # el tiempo de rellenado de los ingredientes es proporcional a la cantidad de ingredientes por rellenar?
+    # Ejemplo: (si rellena 5 tortillas el tiempo es 5 segundos aun asi? o si es proporcional)
     
-    pass
+    # Diccionario con fillings de todos los taqueros
+    fillingsDict = {}
     
+    # Ordenar de menor a mayor y rellenar?
+
+    while True:
+        if(taqueroAdobada.tortillas > taquerosShared.taquero1.tortillas):
+            sleep(CHALAN_WAITING_TIME["tortillas"])
+            taqueroAdobada.tortillas = INGREDIENTS_AT_MAX['tortillas']
+            pass
+    
+def chalanAbajo():
+    # este tambien 
+    while True:
+        
+        pass
+
 joinear = []
 
 def readJson(data):
@@ -292,13 +323,13 @@ def readJson(data):
         ordenObject = orden['orden'] # es una lista
         OrdersInProcessDictionary[orden['request_id']] = orden
         
-        
         #orden_thread = Thread(tarpop=categorizador, args=(ordenObject, orden['request_id']))
         #i+=1  
         #joinear.append(orden_thread)
         
         #orden_thread.start()
         categorizador(ordenObject, orden['request_id'])
+        
         '''
         OrdersInProcessDictionary[orden['request_id']] = orden
         categorizador(ordenObject, orden['request_id'], i)
