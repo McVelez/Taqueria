@@ -4,6 +4,7 @@ import json
 from time import sleep
 import copy
 import math
+import numpy as np
 from collections import deque
 
 
@@ -167,7 +168,6 @@ def globalAssignator(queueNeeded, taqueroInstance):
             taqueroInstance.QOGE.append(suborder)    
             #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())
     
-
 cantSubordersInQOGH = 4   
 
 def quesadillero():
@@ -253,7 +253,6 @@ def individualTaqueroMethod(taquero):
                 else:
                     taquero.QOGH.append(subordenG)
         break
-    
 
 def cookFood(taquero, suborder, key, index):
     sleep(1)
@@ -265,7 +264,18 @@ def cookFood(taquero, suborder, key, index):
     OrdersInProcessDictionary[key]['orden'][abs( int(suborder['part_id'][-(index):]))]['remaining_tacos'] -=1
 
 def sharedTaqueroMethod(Taquero):
+    taque1 = Taquero.taquero1
+    taque2 = Taquero.taquero2
+    # QOP 
+    # taquero.FLAG si un taquero esta haciendo ordenes pequenias
+        # SI HAY ALGUIEN
+            # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
+            # SI EL QOP ESTA VACIO SE CAMBIA SU FLAG PARA HACER ORDENES DEL QOGH
 
+        # NO HAY NADIE
+            # SE ESPERA LA ORDEN A QUE ALGUNO DE LOS DOS TAQUEROS TERMINE DE HACER SU OCTAVO Y A DICHO
+            #    TAQUERO SE LE ASIGNA EL FLAG DE HACER LAS ORDENES PEQUENIAS
+    
     pass
 
 
@@ -317,8 +327,10 @@ if __name__ == "__main__":
         f.close()
     
     readJson(data)
-    
-    individualTaqueroMethod(taqueroAdobada)   
+    #np.save("test.npy", taqueroAsadaSuadero.__dict__)
+
+    sharedTaqueroMethod(taqueroAsadaSuadero)
+    #individualTaqueroMethod(taqueroAdobada)   
     #suborderAsignator(None)
 
     '''for thr in joinear:
