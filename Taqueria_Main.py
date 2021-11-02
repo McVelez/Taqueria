@@ -169,12 +169,22 @@ def globalAssignator(queueNeeded, taqueroInstance):
 
 cantSubordersInQOGH = 4   
 
+def quesadillero():
+    while True:
+        # NOTA: Va afuncionar como un FIFO
+        if (queueQuesadillas):
+            suborden = queueQuesadillas.pop()
+            sleep( 20 * suborden['quantity'])
+
 def individualTaqueroMethod(taquero):
     while(True):
+        # NOTA: Esta bien repetir codigo para QOQ y QOP? 
+        # NOTA 2.0 Cuando se regrese una suborden de quesafillas del quesadillero como se meten al QOQ?
         # Copiamos el queue a otro espacio de memoria
         QOQ_copy = copy.deepcopy(taquero.QOQ)
         snapshotQOQ = []
         # se genera el snapshot al vaciar tnto la copia como el queue original
+        # no olvidar agregar llamada a quesadillero para cuando no haya suficientes
         while (len(QOQ_copy)>0):
             subor = QOQ_copy.pop() 
             snapshotQOQ.append(subor)
@@ -185,16 +195,28 @@ def individualTaqueroMethod(taquero):
             index = sub['part_id'].find('-')
             # llave de la orden a la que pertenece
             key = int(sub['part_id'][:index])
+            if (sub['quantity'] > taquero.stackQuesadillas):
+                queueQuesadillas.append(sub)
+                OrdersInProcessDictionary[key]['orden'][abs( int(sub['part_id'][-(index):]))]['status'] = STATES[2] # deberia de ser ready or running?
+                continue
+            # llamar a pedir las quesadillas que se van a utilizar
             # se itera por cada taco en la suborden de quesadillas
             for taco in range(sub['quantity']):
                 # se hace cada taco
                 cookFood(taquero, sub, key, index)
+                taquero.stackQuesadillas -= 1
         # acquire( Taquero.QOP )
-        '''QOP_copy = copy.copy(taquero.QOP)
+        '''QOP_copy = copy.deepcopy(taquero.QOP)
         snapshotQOP = []
-        while (not QOP_copy):
-            snapshotQOP.append(QOP_copy.pop())
-            taquero.QOP.pop()'''
+        while (len(QOP_copy)>0):
+            subor = QOP_copy.pop() 
+            snapshotQOP.append(subor)
+            taquero.QOP.pop()
+        for taco in snapshotQOP:
+            index = sub['part_id'].find('-')
+            key = int(sub['part_id'][:index])
+            for taco in range(sub['quantity']):
+                cookFood(taquero, sub, key, index)'''
         # release bla 
         
         '''
@@ -237,7 +259,7 @@ def sharedTaqueroMethod(Taquero, suborder):
 
 
 def chalan():
-    
+    # este bato va a ser explotado laboralmente
     
     pass
     
