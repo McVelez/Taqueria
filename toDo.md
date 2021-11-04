@@ -22,4 +22,5 @@
 	</ul>
     </li>
     <li>Agregar persona de quesadillas</li>
+    <li> PREGUNTAR SI TENEMOS QUE NOTIFICAR</li>
 </ul>

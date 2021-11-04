@@ -14,7 +14,7 @@ MEATS = ["asada", "adobada", "cabeza", "tripa", "suadero"]
 TYPES = ["taco", "quesadilla"]
 INGREDIENTS = ["salsa", "cilantro", "cebolla", "guacamole"]
 CHALAN_WAITING_TIME = {"salsa":15, "cilantro":10, "cebolla":10, "guacamole":20, "tortillas":5}
-INGREDIENTS_AT_MAX = {"salsa":150, "cilantro":200, "cebolla":200, "guacamole":100, "tortillas":50}
+INGREDIENTS_AT_MAX = {"tortillas":50, "salsa":150, "guacamole":100, "cilantro":200, "cebolla":200}
 TAQUERO_WAITING_TIME = {"salsa":0.5, "cilantro":0.5, "cebolla":0.5, "guacamole":0.5, "tortillas":0}
 QUESADILLERO_STACK = 0
 
@@ -299,21 +299,42 @@ def chalanArriba():
     # Ejemplo: (si rellena 5 tortillas el tiempo es 5 segundos aun asi? o si es proporcional)
     
     # Diccionario con fillings de todos los taqueros
-    fillingsDict = {}
     
+    #fillingsList[0].pop(fillingsList[0].index(min(fillingsList[0])))
     # Ordenar de menor a mayor y rellenar?
-
+    
     while True:
-        if(taqueroAdobada.tortillas > taquerosShared.taquero1.tortillas):
-            sleep(CHALAN_WAITING_TIME["tortillas"])
-            taqueroAdobada.tortillas = INGREDIENTS_AT_MAX['tortillas']
-            pass
+        ingredientsA = [(taqueroAdobada.fillings[a],i) for a,i in zip(list(taqueroAdobada.__dict__['fillings']), range(1,5))]
+        ingredientsS= [(taqueroAsadaSuadero.taquero1.fillings[a],i) for a,i in zip(list(taqueroAsadaSuadero.taquero1.__dict__['fillings']), range(4))]
+        fillingsList = [[(taqueroAdobada.tortillas,0)],[(taqueroAsadaSuadero.taquero1.tortillas,0)]]
+        fillingsList[0].extend(ingredientsA)
+        fillingsList[1].extend(ingredientsS)
+        fillingsList[0] = [ (porcentaje(a[0], fillingsList[0].index(a)), a[1]) for a in fillingsList[0] ]
+        fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
+        if min(fillingsList[0]) >= min(fillingsList[1]):
+            do = min(fillingsList[1])
+            if do == 1:
+                continue
+            which = list(taqueroAsadaSuadero.taquero1.__dict__['fillings'])[do[1]]
+            taqueroAsadaSuadero.taquero1.fillings[which] = INGREDIENTS_AT_MAX[which]
+            # PREGUNTAR SI TENEMOS QUE NOTIFICAR
+            sleep(CHALAN_WAITING_TIME[which])
+        else:
+            do = min(fillingsList[0])
+            if do == 1:
+                continue
+            which = list(taqueroAdobada.__dict__['fillings'])[do[1]]
+            taqueroAdobada.fillings[which] = INGREDIENTS_AT_MAX[which]
+            sleep(CHALAN_WAITING_TIME[which])
+            
+        
+    
+    
     
 def chalanAbajo():
     # este tambien 
-    while True:
+    pass
         
-        pass
 
 joinear = []
 
@@ -349,6 +370,8 @@ taqueroAsadaSuadero = taquerosShared(9.33, 9.39)
 taqueroAdobada.__dict__.update(instanceQueues.__dict__)
 taqueroTripaCabeza.__dict__.update(instanceQueues.__dict__)
 
+def porcentaje(a,b):
+    return a / INGREDIENTS_AT_MAX[list(INGREDIENTS_AT_MAX.keys())[b]]
 
 
 if __name__ == "__main__":
@@ -356,11 +379,24 @@ if __name__ == "__main__":
     with open('Ordenes.json', 'r') as f:
         data = json.load(f)
         f.close()
+    ingredientsA = [(taqueroAdobada.fillings[a],i) for a,i in zip(list(taqueroAdobada.__dict__['fillings']), range(1,5))]
+    ingredientsS= [(taqueroAsadaSuadero.taquero1.fillings[a],i) for a,i in zip(list(taqueroAsadaSuadero.taquero1.__dict__['fillings']), range(4))]
+    fillingsList = [[(taqueroAdobada.tortillas,0)],[(taqueroAsadaSuadero.taquero1.tortillas,0)]]
+    fillingsList[0].extend(ingredientsA)
+    fillingsList[1].extend(ingredientsS)
+    fillingsList[0] = [ (porcentaje(a[0], fillingsList[0].index(a)), a[1]) for a in fillingsList[0] ]
+    fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
+
     
-    readJson(data)
+    do = min(fillingsList[1])
+    if do != 1:
+        which = list(taqueroAsadaSuadero.taquero1.__dict__['fillings'])[do[1]]
+        taqueroAsadaSuadero.taquero1.fillings[which] = INGREDIENTS_AT_MAX[which]
+        print(which)
+    #readJson(data)
     #np.save("test.npy", taqueroAsadaSuadero.__dict__)
 
-    sharedTaqueroMethod(taqueroAsadaSuadero)
+    #sharedTaqueroMethod(taqueroAsadaSuadero)
     #individualTaqueroMethod(taqueroAdobada)   
     #suborderAsignator(None)
 
