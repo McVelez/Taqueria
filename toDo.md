@@ -3,9 +3,9 @@
 <ul>
     <li>Agregar los queues (SWS)</li>
     <li>Agregar quesadillero dispatcher</li>
-    <li>Agregar chalanes
+    <li>Agregar chalanes (X)
         <ul>
-            <li>Relleno de fillings</li> 
+            <li>Relleno de fillings(X)</li> 
 	</ul>
     </li>
     <li>Agregar control de diccionario (maso)</li>

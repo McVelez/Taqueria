@@ -24,10 +24,11 @@ queueTripaCabeza = deque()
 queueQuesadillas = deque()
 
 class taqueroIndividual:
-    def __init__(self, restTime, tacosNeededForRest, fan = False, tortillas = 50, stackQuesadillas = 5):
+    def __init__(self, restTime, tacosNeededForRest, id, fan = False, tortillas = 50, stackQuesadillas = 5):
         self.fillings = {"salsa":150, "guacamole":100, "cebolla":200, "cilantro":200}
         self.stackQuesadillas = stackQuesadillas
         self.fan = fan
+        self.id = id
         self.tortillas = tortillas
         self.restTime = restTime
         self.tacoCounter = 0
@@ -50,9 +51,9 @@ class queues:
         self.QOGH = deque()
 
 class taquerosShared:
-    def __init__(self, restTime1, restTime2):
-        self.taquero1 = taqueroIndividual(restTime1, 311)
-        self.taquero2 = taqueroIndividual(restTime2, 313)
+    def __init__(self, restTime1, restTime2, id1, id2):
+        self.taquero1 = taqueroIndividual(restTime1, 311, id1)
+        self.taquero2 = taqueroIndividual(restTime2, 313, id2)
         queues.__init__(self)
 
 class taco:
@@ -172,19 +173,37 @@ cantSubordersInQOGH = 4
 
 def quesadillero():
     while True:
-        # NOTA: Va afuncionar como un FIFO
+        # NOTA: Va a funcionar como un FIFO?
+        # AGREGAR STACK
         if (queueQuesadillas):
             suborden = queueQuesadillas.pop()
-            sleep( 20 * suborden['quantity'])
+            # notificar que sta haciendo quesadilla 'tal'
+            #sleep( 20 * suborden[0]['quantity'])
             # indice para identificar a la suborden dentro del diccionario
+            print(suborden['part_id'])
             index = suborden['part_id'].find('-')
             # llave de la orden a la que pertenece
-            key = int(suborden['part_id'][:index])
-            OrdersInProcessDictionary[key]['orden'][abs(int(suborden['part_id'][-(index):]))]['status'] = STATES[3]
+            key = int(suborden[0]['part_id'][:index])
             # poner estado de suborden como exit
+            OrdersInProcessDictionary[key]['orden'][abs(int(suborden[0]['part_id'][-(index):]))]['status'] = STATES[3]
+            if (suborden[2]):
+                dispatcher(suborden)
 
-def dispatcher():
+def dispatcher(suborden): # suborden es una tupla (sub , taquero.id, 0)
+    # adobada 0, taquero1 =1, taquero2=2, tripa 3
     # Se encargara de unir las subordenes 
+    
+    # check taquero id y a su atributo stackQuesadillas += sub['quantity']
+
+    if suborden[1] == 0:
+        taqueroAdobada.stackQuesadillas += suborden[0]['quantity']
+    if suborden[1] == 1:
+        taqueroAsadaSuadero.taquero1.stackQuesadillas += suborden[0]['quantity']
+    if suborden[1] == 2:
+        taqueroAsadaSuadero.taquero2.stackQuesadillas += suborden[0]['quantity']
+    if suborden[1] == 3:
+        taqueroTripaCabeza.stackQuesadillas += suborden[0]['quantity']
+    print("despachando orden", suborden[0]['part_id'])
     # out of service 
     pass
 
@@ -208,17 +227,25 @@ def individualTaqueroMethod(taquero):
             index = sub['part_id'].find('-')
             # llave de la orden a la que pertenece
             key = int(sub['part_id'][:index])
-            if (sub['quantity'] <= taquero.stackQuesadillas):
-                # darle las quesadillas
-                taquero.stackQuesadillas -= sub['quantity']
-                taquero.stackQuesadillas += sub['quantity'] # temporal!!!!!!!!!!!!!!!!!
-                # queueQuesadillas.append(sub['quantity'])  quesadillas dispatcher que el va usar IDS y todo eso 
-
+            stackTaken = False
+            if (sub['type']==TYPES[1]):
+                if (sub['quantity'] <= taquero.stackQuesadillas):
+                    # darle las quesadillas
+                    taquero.stackQuesadillas -= sub['quantity']
+                    #taquero.stackQuesadillas += sub['quantity'] # temporal!!!!!!!!!!!!!!!!!
+                    peticionQuesadillas = (sub , taquero.id, 1)
+                    queueQuesadillas.append(peticionQuesadillas)  #quesadillas dispatcher que el va usar IDS y todo eso 
+                    stackTaken = True
             # llamar a pedir las quesadillas que se van a utilizar
             # se itera por cada taco en la suborden de quesadillas
             for taco in range(sub['quantity']):
                 # se hace cada taco
                 cookFood(taquero, sub, key, index)
+            
+            if sub['type']==TYPES[1] and stackTaken == False:
+                peticionQuesadillas = (sub , taquero.id, 0)
+                queueQuesadillas.append(peticionQuesadillas)
+
             print(sub['part_id'], "done")
         # acquire( Taquero.QOP )
         # release bla 
@@ -245,7 +272,8 @@ def individualTaqueroMethod(taquero):
                 # Logica de actualizacion de diccionario y revision de subordenes grandes completadas
                 if (OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos'] == 0):
                     if subordenG['type'] == TYPES[TYPES.index('quesadilla')]:
-                        queueQuesadillas.append(subordenG)
+                        subordenQues = (subordenG, taquero.id, 0)
+                        queueQuesadillas.append(subordenQues)
                     else:
                         OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['status'] = STATES[3]
                     if (taquero.QOGE is False):
@@ -327,10 +355,6 @@ def chalanArriba():
             taqueroAdobada.fillings[which] = INGREDIENTS_AT_MAX[which]
             sleep(CHALAN_WAITING_TIME[which])
             
-        
-    
-    
-    
 def chalanAbajo():
     
     while True:
@@ -385,10 +409,11 @@ def nextOrder(qOrders):
 def cliente(SQS1, SQS2, SQS3):
     pass
 
+# adobada =0, taquero1 =1, taquero2=2, tripa 3
 instanceQueues = queues()
-taqueroAdobada = taqueroIndividual(3, 100)
-taqueroTripaCabeza = taqueroIndividual(3, 100)
-taqueroAsadaSuadero = taquerosShared(9.33, 9.39)
+taqueroAdobada = taqueroIndividual(3, 100, 0)
+taqueroTripaCabeza = taqueroIndividual(3, 100, 3)
+taqueroAsadaSuadero = taquerosShared(9.33, 9.39, 1, 2)
 taqueroAdobada.__dict__.update(instanceQueues.__dict__)
 taqueroTripaCabeza.__dict__.update(instanceQueues.__dict__)
 
@@ -397,29 +422,16 @@ def porcentaje(a,b):
 
 
 if __name__ == "__main__":
-    #with open('ordersTest.json', 'r') as f:
-    with open('Ordenes.json', 'r') as f:
+    with open('ordersTest.json', 'r') as f:
+    #with open('Ordenes.json', 'r') as f:
         data = json.load(f)
         f.close()
-    ingredientsA = [(taqueroAdobada.fillings[a],i) for a,i in zip(list(taqueroAdobada.__dict__['fillings']), range(1,5))]
-    ingredientsS= [(taqueroAsadaSuadero.taquero1.fillings[a],i) for a,i in zip(list(taqueroAsadaSuadero.taquero1.__dict__['fillings']), range(4))]
-    fillingsList = [[(taqueroAdobada.tortillas,0)],[(taqueroAsadaSuadero.taquero1.tortillas,0)]]
-    fillingsList[0].extend(ingredientsA)
-    fillingsList[1].extend(ingredientsS)
-    fillingsList[0] = [ (porcentaje(a[0], fillingsList[0].index(a)), a[1]) for a in fillingsList[0] ]
-    fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
-
     
-    do = min(fillingsList[1])
-    if do != 1:
-        which = list(taqueroAsadaSuadero.taquero1.__dict__['fillings'])[do[1]]
-        taqueroAsadaSuadero.taquero1.fillings[which] = INGREDIENTS_AT_MAX[which]
-        print(which)
-    #readJson(data)
+    readJson(data)
     #np.save("test.npy", taqueroAsadaSuadero.__dict__)
 
     #sharedTaqueroMethod(taqueroAsadaSuadero)
-    #individualTaqueroMethod(taqueroAdobada)   
+    individualTaqueroMethod(taqueroAdobada)   
     #suborderAsignator(None)
 
     '''for thr in joinear:

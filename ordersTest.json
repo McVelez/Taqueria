@@ -6,16 +6,27 @@
 	    "orden": [
 			{
                 "part_id": "0-0",
-                "type": "taco",
+                "type": "quesadilla",
                 "meat": "adobada",
                 "status": "open",
-                "quantity": 91,
+                "quantity": 4,
                 "ingredients": [
                     "salsa",
                     "cilantro",
                     "cebolla"
                 ]
+            },{
+                "part_id": "0-1",
+                "type": "quesadilla",
+                "meat": "adobada",
+                "status": "open",
+                "quantity": 10,
+                "ingredients": [
+                    "salsa",
+                    "cilantro"
+                ]
             }
+            
 	]
 	}
       
