@@ -332,8 +332,30 @@ def chalanArriba():
     
     
 def chalanAbajo():
-    # este tambien 
-    pass
+    
+    while True:
+        ingredientsT = [(taqueroTripaCabeza.fillings[a],i) for a,i in zip(list(taqueroTripaCabeza.__dict__['fillings']), range(1,5))]
+        ingredientsS= [(taqueroAsadaSuadero.taquero2.fillings[a],i) for a,i in zip(list(taqueroAsadaSuadero.taquero2.__dict__['fillings']), range(4))]
+        fillingsList = [[(taqueroTripaCabeza.tortillas,0)],[(taqueroAsadaSuadero.taquero2.tortillas,0)]]
+        fillingsList[0].extend(ingredientsT)
+        fillingsList[1].extend(ingredientsS)
+        fillingsList[0] = [ (porcentaje(a[0], fillingsList[0].index(a)), a[1]) for a in fillingsList[0] ]
+        fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
+        if min(fillingsList[0]) >= min(fillingsList[1]):
+            do = min(fillingsList[1])
+            if do == 1:
+                continue
+            which = list(taqueroAsadaSuadero.taquero2.__dict__['fillings'])[do[1]]
+            taqueroAsadaSuadero.taquero2.fillings[which] = INGREDIENTS_AT_MAX[which]
+            # PREGUNTAR SI TENEMOS QUE NOTIFICAR
+            sleep(CHALAN_WAITING_TIME[which])
+        else:
+            do = min(fillingsList[0])
+            if do == 1:
+                continue
+            which = list(taqueroTripaCabeza.__dict__['fillings'])[do[1]]
+            taqueroTripaCabeza.fillings[which] = INGREDIENTS_AT_MAX[which]
+            sleep(CHALAN_WAITING_TIME[which])
         
 
 joinear = []
