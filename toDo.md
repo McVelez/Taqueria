@@ -1,17 +1,10 @@
 # to do
 <h1>Primero implementar los taqueros individuales sin threads</h1>
 <ul>
-    <li>Agregar los queues (SWS)</li>
-    <li>Agregar quesadillero dispatcher</li>
-    <li>Agregar chalanes (X)
-        <ul>
-            <li>Relleno de fillings(X)</li> 
-	</ul>
-    </li>
+    <li>Agregar los queues (SQS)</li>
     <li>Agregar control de diccionario (maso)</li>
-    <li>Agregar funcionalidad de taquero
+    <li>Agregar funcionalidad de taqueros compartidos
     <ul>
-            <li>Queues individuales</li>
             <ul>
             <li>Ordenes peques</li> 
             </ul>
@@ -21,6 +14,5 @@
 	    <li>Peticion de quesadillas</li>
 	</ul>
     </li>
-    <li>Agregar persona de quesadillas</li>
-    <li> PREGUNTAR SI TENEMOS QUE NOTIFICAR</li>
+    <li>  <b>Preguntar que se hace con las ordenens si el visibility timeout se vence</b></li>
 </ul>
