@@ -1,3 +1,4 @@
+from os import name
 from threading import Thread
 import json
 #import queue
@@ -97,11 +98,12 @@ def assignToTaqueroQueue(suborder, key):
         globalAssignator(queueAdobada, taqueroAdobada)
     
 def maxSumOrder(orden, maxQuantity, key, type):
+    ordenCompleta = OrdersInProcessDictionary[key]
     isTaco = lambda x: x['type'] == TYPES[type]
     #print(orden,sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ), type)
     if sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ) > maxQuantity:
         OrdersInProcessDictionary[key]['status'] = STATES[0]
-        responseOrden(key, orden, "Categorizador", "Rechazó orden (Cantidad total excede el limite aceptado)")
+        responseOrden(key, ordenCompleta, "Categorizador", "Rechazó orden (Cantidad total excede el limite aceptado)")
         for suborder in orden:
             suborder['status'] = STATES[0]
         return True
@@ -137,7 +139,7 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
         OrdersInProcessDictionary[key]['status'] = STATES[0]
         responseOrden(key, ordenCompleta, who, "Rechazó orden (orden vacía)")
 
-    print(OrdersInProcessDictionary[key]['response'])
+    #print(OrdersInProcessDictionary[key]['response'])
 
     # suborderes: no empty, 100 > tacos en suborder, 400 > tacos en total de orden
     flag = maxSumOrder(orden, maxQuantityPerOrderQuesadillas, key, 1)
@@ -146,10 +148,9 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
         return
     for suborder in orden:
 
-        suborderIndex = abs(int(suborder['part_id'][-(index):]))
-
         # Check if type is supported
         index = suborder['part_id'].find('-')
+        suborderIndex = abs(int(suborder['part_id'][-(index):]))
         if suborder['type'] not in TYPES: 
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
             responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No existe el tipo)".format(suborder['part_id']))
@@ -182,7 +183,7 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][suborderIndex]['quantity']
             index = suborder['part_id'].find('-')
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[1]
-            responseOrden(key, orden, who, "La suborden {0} entra en estado READY".format(suborder['part_id']))
+            responseOrden(key, ordenCompleta, who, "La suborden {0} entra en estado READY".format(suborder['part_id']))
             assignToTaqueroQueue(suborder, key)
     
 def globalAssignator(queueNeeded, taqueroInstance):
@@ -190,7 +191,7 @@ def globalAssignator(queueNeeded, taqueroInstance):
     # dequeue del queue global
     suborder = queueNeeded.pop()
     index = suborder['part_id'].find('-')
-    key = int(suborder[0]['part_id'][:index])
+    key = int(suborder['part_id'][:index])
     suborderIndex = abs(int(suborder['part_id'][-(index):]) )
     # enqueue al queue correpondiente del taquero
     # quantity, type
@@ -214,7 +215,8 @@ def globalAssignator(queueNeeded, taqueroInstance):
             taqueroInstance.QOGE.append(suborder)  
             where = 'QOGE'  
             #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())
-    responseOrden(key, OrdersInProcessDictionary[key], who, "Suborden {0} agregada a {1} de taquero {2}".format(suborder['part_id'],where, taqueroInstance.id))
+    name = taqueroInstance.__class__.__name__
+    responseOrden(key, OrdersInProcessDictionary[key], who, "Suborden {0} agregada a {1} de taquero {2}".format(suborder['part_id'],where, name))
 
 def quesadillero():
     who = 'quesadillero'
@@ -242,7 +244,6 @@ def quesadillero():
             else: 
                 responseOrden(key, OrdersInProcessDictionary[key], who, "Suborden {0} hecha".format(suborden[0]['part_id']))
                 
-
 def dispatcher(suborden, key): # suborden es una tupla (sub , taquero.id, 0)
     who = "Dispatcher"
     # adobada 0, taquero1 =1, taquero2=2, tripa 3
@@ -478,7 +479,7 @@ def porcentaje(a,b):
 
 
 if __name__ == "__main__":
-    with open('ordersTest.json', 'r') as f:
+    with open('Ordenes.json', 'r') as f:
     #with open('Ordenes.json', 'r') as f:
         data = json.load(f)
         f.close()
@@ -489,9 +490,5 @@ if __name__ == "__main__":
     #sharedTaqueroMethod(taqueroAsadaSuadero)
     
     
-    #individualTaqueroMethod(taqueroAdobada)   
-    
-    #suborderAsignator(None)
+    individualTaqueroMethod(taqueroAdobada)   
 
-    '''for thr in joinear:
-        thr.join()'''
