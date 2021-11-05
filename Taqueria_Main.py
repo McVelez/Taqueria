@@ -139,7 +139,7 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
         OrdersInProcessDictionary[key]['status'] = STATES[0]
         responseOrden(key, ordenCompleta, who, "Rechazó orden (orden vacía)")
 
-    #print(OrdersInProcessDictionary[key]['response'])
+    print(OrdersInProcessDictionary[key]['response'])
 
     # suborderes: no empty, 100 > tacos en suborder, 400 > tacos en total de orden
     flag = maxSumOrder(orden, maxQuantityPerOrderQuesadillas, key, 1)
@@ -265,7 +265,7 @@ def dispatcher(suborden, key): # suborden es una tupla (sub , taquero.id, 0)
     pass
 
 def individualTaqueroMethod(taquero):
-    who = taquero.id
+    who = "Taquero " + str(taquero.id)
     while(True):
         # NOTA 2.0 Cuando llegue una suborden de quesadillas, se le tratará como taco (poniendole ingredientes y carne)
         #   y se enviará al quesadillero para que el ponga su quesito y no tenga que regresarlo al tqeuro de nuevo.
@@ -285,6 +285,8 @@ def individualTaqueroMethod(taquero):
             index = sub['part_id'].find('-')
             # llave de la orden a la que pertenece
             key = int(sub['part_id'][:index])
+            ordenCompleta = OrdersInProcessDictionary[key]
+            responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOP)".format(sub['part_id']))
             stackTaken = False
             if (sub['type']==TYPES[1]):
                 if (sub['quantity'] <= taquero.stackQuesadillas):
@@ -299,27 +301,31 @@ def individualTaqueroMethod(taquero):
             for taco in range(sub['quantity']):
                 # se hace cada taco
                 cookFood(taquero, sub, key, index)
-            
             if sub['type']==TYPES[1] and stackTaken == False:
                 peticionQuesadillas = (sub , taquero.id, 0)
                 queueQuesadillas.append(peticionQuesadillas)
+                responseOrden(key, ordenCompleta, who, "Suborden {0} enviada a quesadillero (QOP)".format(sub['part_id']))
+            else:
+                responseOrden(key, ordenCompleta, who, "Suborden {0} es completada (QOP)".format(sub['part_id']))
 
-            print(sub['part_id'], "done")
+            print("done")
         # acquire( Taquero.QOP )
         # release bla 
-        
-        
         for i in range(cantSubordersInQOGH):
             if taquero.QOGH is False:
                 # Logica de preparacion de cada taco de cada suborden grande dentro del QOGH
                 subordenG = taquero.QOGH.pop()
                 index = subordenG['part_id'].find('-')
                 key = int(subordenG['part_id'][:index])
+                ordenCompleta = OrdersInProcessDictionary[key]
                 
+                responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOGH)".format(subordenG['part_id']))
+                
+                subordenIndex = abs(int(subordenG['part_id'][-(index):]))
                 cantTacosPorHacer = math.floor(subordenG['quantity'] / 4)
                 # En base al siguiente condicional aseguramos que cada suborden siempre sea completada en exactamente 4 repeticiones
-                if(OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos'] / cantTacosPorHacer < 2):
-                    cantTacosPorHacer = OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos']
+                if(OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] / cantTacosPorHacer < 2):
+                    cantTacosPorHacer = OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos']
 
                 # Por aqui va lo de agregar RUNNING al diccionario de los estados
       
@@ -328,12 +334,13 @@ def individualTaqueroMethod(taquero):
                     if rest:
                         taquero.rest()
                 # Logica de actualizacion de diccionario y revision de subordenes grandes completadas
-                if (OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['remaining_tacos'] == 0):
+                if (OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] == 0):
                     if subordenG['type'] == TYPES[TYPES.index('quesadilla')]:
                         subordenQues = (subordenG, taquero.id, 0)
                         queueQuesadillas.append(subordenQues)
                     else:
-                        OrdersInProcessDictionary[key]['orden'][abs(int(subordenG['part_id'][-(index):]))]['status'] = STATES[3]
+                        OrdersInProcessDictionary[key]['orden'][subordenIndex]['status'] = STATES[3]
+                        responseOrden(key, ordenCompleta, who, "Suborden {0} es completada".format(subordenG['part_id']))
                     if (taquero.QOGE is False):
                         taquero.QOGH.append(taquero.QOGE.pop())
                 else:
@@ -341,15 +348,26 @@ def individualTaqueroMethod(taquero):
         break
 
 def cookFood(taquero, suborder, key, index):
+    who = "taquero" + str(taquero.id)
+    # Sleep default por hacer un taco
     sleep(1)
-    
+
+    # Variables necesarias para actualizar las acciones de la orden
+    index = suborder['part_id'].find('-')
+    key = int(suborder['part_id'][:index])
+    ordenCompleta = OrdersInProcessDictionary[key]
+    First = False
     while(taquero.tortillas == 0):
-        pass
+        if (First==False):
+            responseOrden(key, ordenCompleta, who, "Suborden {0} en espera de tortillas".format(suborder['part_id']))
+            First = True
     
     for ing in suborder['ingredients']:
+        First = False
         while (taquero.fillings[ing] == 0):
-            pass
-        
+            if (First==False):
+                responseOrden(key, ordenCompleta, who, "Suborden {0} en espera de que el chalan rellene ingrediente {1}".format(suborder['part_id'], ing))
+                First = True
         sleep(TAQUERO_WAITING_TIME[ing])
         taquero.fillings[ing] -= 1
         
