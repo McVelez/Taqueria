@@ -3,31 +3,7 @@
 	    "datetime": "2021-09-14 16:15:55.421215",
 	    "request_id": 0,
 	    "status": "open",
-	    "orden": [
-			{
-                "part_id": "0-0",
-                "type": "quesadilla",
-                "meat": "adobada",
-                "status": "open",
-                "quantity": 4,
-                "ingredients": [
-                    "salsa",
-                    "cilantro",
-                    "cebolla"
-                ]
-            },{
-                "part_id": "0-1",
-                "type": "quesadilla",
-                "meat": "adobada",
-                "status": "open",
-                "quantity": 10,
-                "ingredients": [
-                    "salsa",
-                    "cilantro"
-                ]
-            }
-            
-	]
+	    "orden": []
 	}
       
 ]

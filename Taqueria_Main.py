@@ -6,6 +6,7 @@ import copy
 import math
 import numpy as np
 from collections import deque
+from datetime import datetime, timedelta
 
 
 OrdersInProcessDictionary= {}
@@ -95,57 +96,86 @@ def maxSumOrder(orden, maxQuantity, key, type):
     #print(orden,sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ), type)
     if sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ) > maxQuantity:
         OrdersInProcessDictionary[key]['status'] = STATES[0]
+        responseOrden(key, orden, "Categorizador", "Rechazó orden (Cantidad total excede el limite aceptado)")
         for suborder in orden:
             suborder['status'] = STATES[0]
         return True
     return False
 
-def categorizador(orden,key): # objeto de toda la orden
 
+def calcularMS(DateLlegada, DateAccion):
+    from dateutil import parser
+    date1 = parser.parse(str(DateAccion))
+    date2 = parser.parse(DateLlegada)
+    ms = int((date1 - date2).total_seconds() * 1000)
+    return ms
+
+def responseOrden(key, orden, who, what):
+    OrdersInProcessDictionary[key]['response'].append({
+        "Who" : who,
+        "When" : str(datetime.now()) ,
+        "What" : what,
+        "Time" : calcularMS(orden['datetime'], datetime.now())
+        })
+
+def categorizador(ordenCompleta,key): # objeto de toda la orden
+    who = "Categorizador"
+    orden = ordenCompleta['orden']
     minQuantityPerSuborder = 1
     maxQuantityPerSuborderTacos = 100
     maxQuantityPerSuborderQuesadillas = 50
     maxQuantityPerOrderTacos = 400
     maxQuantityPerOrderQuesadillas = 100
-
+    OrdersInProcessDictionary[key]['response'] = []
     # ESTADOS: REJECTED (0)| READY (1) | RUNNING (2)| EXIT (3)
     # Check if order is empty
-    if checkIfEmpty(orden): OrdersInProcessDictionary[key]['status'] = STATES[0]
+    if checkIfEmpty(orden): 
+        OrdersInProcessDictionary[key]['status'] = STATES[0]
+        responseOrden(key, ordenCompleta, who, "Rechazó orden (orden vacía)")
+
+    print(OrdersInProcessDictionary[key]['response'])
+
     # suborderes: no empty, 100 > tacos en suborder, 400 > tacos en total de orden
     flag = maxSumOrder(orden, maxQuantityPerOrderQuesadillas, key, 1)
     flag = maxSumOrder(orden, maxQuantityPerOrderTacos, key, 0)
     if flag:
         return
-
     for suborder in orden:
+
+        suborderIndex = abs(int(suborder['part_id'][-(index):]))
+
         # Check if type is supported
         index = suborder['part_id'].find('-')
         if suborder['type'] not in TYPES: 
-            
-            OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['status'] = STATES[0]
+            OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+            responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No existe el tipo)".format(suborder['part_id']))
             continue
         
         if suborder['type'] == TYPES[0]:#taco
             # Check min and max of suborder
             if suborder['quantity'] < minQuantityPerSuborder or suborder['quantity'] > maxQuantityPerSuborderTacos: 
-                OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['status'] = STATES[0]
+                OrdersInProcessDictionary[key]['orden'][ suborderIndex ]['status'] = STATES[0]
+                responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (Cantidad excede el limite de tacos)".format(suborder['part_id']))
                 continue
         else:
             if suborder['quantity'] < minQuantityPerSuborder or suborder['quantity'] > maxQuantityPerSuborderQuesadillas: 
-                OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['status'] = STATES[0]
+                OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+                responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (Cantidad excede el limite de quesadillas)".format(suborder['part_id']))
                 continue
         # Check if meat is supported
         if suborder['meat'] not in MEATS: 
-            OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['status'] = STATES[0]
+            OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+            responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No acepta esa carne)".format(suborder['part_id']))
             continue
         
         # Check if ingredients are supported
         for ingredient in suborder['ingredients']:
-            if ingredient not in INGREDIENTS: OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['status'] = STATES[0]
+            if ingredient not in INGREDIENTS: OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+            responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No acepta el ingrediente)".format(suborder['part_id']))
 
         #print(suborder['part_id'], suborder['type'], suborder['meat'], suborder['quantity'])
         if(suborder['status'] != STATES[0]):
-            OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][ abs(int(suborder['part_id'][-(index):])) ]['quantity']
+            OrdersInProcessDictionary[key]['orden'][suborderIndex]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][suborderIndex]['quantity']
             assignToTaqueroQueue(suborder, key)
     
 def globalAssignator(queueNeeded, taqueroInstance):
@@ -332,13 +362,13 @@ def chalanArriba():
     # Ordenar de menor a mayor y rellenar?
     
     while True:
-        ingredientsA = [(taqueroAdobada.fillings[a],i) for a,i in zip(list(taqueroAdobada.__dict__['fillings']), range(1,5))]
-        ingredientsS= [(taqueroAsadaSuadero.taquero1.fillings[a],i) for a,i in zip(list(taqueroAsadaSuadero.taquero1.__dict__['fillings']), range(4))]
+        ingredientsA = [(taqueroAdobada.fillings[ingredient],i) for ingredient,i in zip(list(taqueroAdobada.__dict__['fillings']), range(1,5))]
+        ingredientsS= [(taqueroAsadaSuadero.taquero1.fillings[ingredient],i) for ingredient,i in zip(list(taqueroAsadaSuadero.taquero1.__dict__['fillings']), range(4))]
         fillingsList = [[(taqueroAdobada.tortillas,0)],[(taqueroAsadaSuadero.taquero1.tortillas,0)]]
         fillingsList[0].extend(ingredientsA)
         fillingsList[1].extend(ingredientsS)
-        fillingsList[0] = [ (porcentaje(a[0], fillingsList[0].index(a)), a[1]) for a in fillingsList[0] ]
-        fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
+        fillingsList[0] = [ (porcentaje(tupleInfo[0], fillingsList[0].index(tupleInfo)), tupleInfo[1]) for tupleInfo in fillingsList[0] ]
+        fillingsList[1] = [ (porcentaje(tupleInfo[0], fillingsList[1].index(tupleInfo)), tupleInfo[1]) for tupleInfo in fillingsList[1] ]
         if min(fillingsList[0]) >= min(fillingsList[1]):
             do = min(fillingsList[1])
             if do == 1:
@@ -381,7 +411,6 @@ def chalanAbajo():
             taqueroTripaCabeza.fillings[which] = INGREDIENTS_AT_MAX[which]
             sleep(CHALAN_WAITING_TIME[which])
         
-
 joinear = []
 
 def readJson(data):
@@ -395,7 +424,7 @@ def readJson(data):
         #joinear.append(orden_thread)
         
         #orden_thread.start()
-        categorizador(ordenObject, orden['request_id'])
+        categorizador(orden, orden['request_id'])
         
         '''
         OrdersInProcessDictionary[orden['request_id']] = orden
@@ -429,9 +458,12 @@ if __name__ == "__main__":
     
     readJson(data)
     #np.save("test.npy", taqueroAsadaSuadero.__dict__)
-
+    
     #sharedTaqueroMethod(taqueroAsadaSuadero)
-    individualTaqueroMethod(taqueroAdobada)   
+    
+    
+    #individualTaqueroMethod(taqueroAdobada)   
+    
     #suborderAsignator(None)
 
     '''for thr in joinear:
