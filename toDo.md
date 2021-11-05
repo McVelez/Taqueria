@@ -1,5 +1,4 @@
 # to do
-<h1>Primero implementar los taqueros individuales sin threads</h1>
 <ul>
     <li>Agregar los queues (SQS)</li>
     <li>Agregar control de diccionario (maso)</li>
@@ -14,5 +13,5 @@
 	    <li>Peticion de quesadillas</li>
 	</ul>
     </li>
-    <li>  <b>Preguntar que se hace con las ordenens si el visibility timeout se vence</b></li>
+    <li>  <b>Preguntar qué se hace con las ordenens si el visibility timeout se vence</b></li>
 </ul>
