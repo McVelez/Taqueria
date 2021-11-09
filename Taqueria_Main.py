@@ -203,7 +203,7 @@ def globalAssignator(queueNeeded, taqueroInstance):
         where = 'QOP'
         #print("QOP",taqueroInstance.__dict__['QOP'].pop())
     else:
-        if(taqueroInstance.QOGE):
+        if(len(taqueroInstance.QOGE)==0):
             if(len(taqueroInstance.QOGH) == 4):
                 taqueroInstance.QOGE.append(suborder) 
                 where = 'QOGE'
@@ -367,7 +367,7 @@ def cookFood(taquero, suborder, key, index):
             if (First==False):
                 responseOrden(key, ordenCompleta, who, "Suborden {0} en espera de que el chalan rellene ingrediente {1}".format(suborder['part_id'], ing))
                 First = True
-        sleep(TAQUERO_WAITING_TIME[ing])
+        #sleep(TAQUERO_WAITING_TIME[ing])
         taquero.fillings[ing] -= 1
         
 
@@ -379,17 +379,30 @@ def cookFood(taquero, suborder, key, index):
 parallel_on_same_queue = threading.Lock()
 parallel_on_different_queues = threading.Lock()
 
+change_flag = threading.Lock()
+
 def sharedTaqueroMethod(Taquero, instance):
-    who = "Taquero {0}".format(instance.id)
     while (True):    
+        who = "Taquero {0}".format(instance.id)
         if parallel_on_different_queues.locked() == False:
             
             # <-- LOCKING
             if (len(Taquero.QOGH) > 0):
                 parallel_on_different_queues.acquire()
+
+                change_flag.acquire()
+                # checar que taquero soy 
+                if(Taquero.taquero1 == instance):
+                    if (Taquero.taquero2.flag == False):
+                        instance.flag = True
+                else:
+                    if (Taquero.taquero1.flag == False):
+                        instance.flag = True
+                change_flag.release()
             
+            #print(f"{who} esta aqui")
             
-            while(len(Taquero.QOP) > 0):
+            while(len(Taquero.QOP) > 0 and instance.flag == False):
                 print(f"{who} hace orden pequeña")
 
                 parallel_on_same_queue.acquire() # cuando tome algo del qop hago antes un acquire
@@ -407,16 +420,32 @@ def sharedTaqueroMethod(Taquero, instance):
                 for taco in range(subordenP['quantity']):
                     # se hace cada taco
                     cookFood(instance, subordenP, key, index)
-            
-            if parallel_on_different_queues.locked():
-                parallel_on_different_queues.release()
-            
+
+                if len(Taquero.QOGH) > 0: # Si de la nada llegó una orden grande 
+                    
+                    change_flag.acquire()
+                    if(Taquero.taquero1 == instance):
+                        if (Taquero.taquero2.flag == False):
+                            instance.flag = True
+                    else:
+                        if (Taquero.taquero1.flag == False):
+                            instance.flag = True
+                    #instance.flag = True
+                    change_flag.release()        
         # <-- UNLOCKING
         else: 
-            while(len(Taquero.QOGH) > 0):
+            while(len(Taquero.QOGH) > 0 and instance.flag == True):
                 print(f"{who} hace orden grande")
+                Taquero.QOGH.pop()
+                change_flag.acquire()
+                instance.flag = False
+                change_flag.release()
                 #sleep(2)
+            parallel_on_different_queues.release()
+        
         # QOP 
+        
+        
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
             # SI HAY ALGUIEN
                 # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
@@ -538,6 +567,7 @@ if __name__ == "__main__":
        f.close()
     
     readJson(data)
+
     uno = Thread(target=sharedTaqueroMethod, args=(taqueroAsadaSuadero, taqueroAsadaSuadero.taquero1))
     dos = Thread(target=sharedTaqueroMethod, args=(taqueroAsadaSuadero, taqueroAsadaSuadero.taquero2))
 

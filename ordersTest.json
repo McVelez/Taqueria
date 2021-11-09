@@ -9,7 +9,7 @@
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",
-			"quantity": 10,
+			"quantity": 4,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
@@ -21,7 +21,7 @@
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",
-			"quantity": 12,
+			"quantity": 4,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
@@ -45,7 +45,7 @@
 			"type": "taco",
 			"meat": "suadero",
 			"status": "open",
-			"quantity": 5,
+			"quantity": 4,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
@@ -57,7 +57,7 @@
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",
-			"quantity": 12,
+			"quantity": 4,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
