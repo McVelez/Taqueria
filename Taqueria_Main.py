@@ -448,6 +448,7 @@ def sharedTaqueroMethod(Taquero, instance):
         # QOP
         
         
+        
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
             # SI HAY ALGUIEN
                 # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
