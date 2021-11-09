@@ -445,9 +445,7 @@ def sharedTaqueroMethod(Taquero, instance):
             if (len(Taquero.QOP)>0):
                 parallel_on_different_queues.release()
         
-        # QOP
-        
-        
+        # QOP      
         
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
             # SI HAY ALGUIEN

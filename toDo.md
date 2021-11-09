@@ -5,14 +5,12 @@
     <li>Agregar funcionalidad de taqueros compartidos
     <ul>
             <ul>
-            <li>Ordenes peques</li> 
+            <li>Ordenes peques (nomas falta quesadillas y registro)</li> 
             </ul>
-	        <li>Queues compartido</li> 
-            <li>Flags</li>
+            <li>Ordenes grandes (el for de 4 de 1/8's y registro)</li>
 	        <li>Rest times</li> 
-            <li>Response de diccionario</li>
-	    <li>Peticion de quesadillas</li>
 	</ul>
     </li>
-    <li>  <b>Preguntar qué se hace con las ordenens si el visibility timeout se vence</b> </li>
+    <li>Response de diccionario</li>
+    <li>  <b>Preguntar qué se hace con las ordenens si el visibility timeout se vence !</b> </li>
 </ul>
