@@ -1,5 +1,6 @@
 from os import name
 from threading import Thread
+import threading
 import json
 #import queue
 from time import sleep
@@ -34,6 +35,7 @@ class taqueroIndividual:
         self.stackQuesadillas = stackQuesadillas
         self.fan = fan
         self.id = id
+        self.flag = False
         self.tortillas = tortillas
         self.restTime = restTime
         self.tacoCounter = 0
@@ -139,7 +141,6 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
         OrdersInProcessDictionary[key]['status'] = STATES[0]
         responseOrden(key, ordenCompleta, who, "Rechazó orden (orden vacía)")
 
-    print(OrdersInProcessDictionary[key]['response'])
 
     # suborderes: no empty, 100 > tacos en suborder, 400 > tacos en total de orden
     flag = maxSumOrder(orden, maxQuantityPerOrderQuesadillas, key, 1)
@@ -235,7 +236,6 @@ def quesadillero():
             # notificar que sta haciendo quesadilla 'tal'
             #sleep( 20 * suborden[0]['quantity'])
             # indice para identificar a la suborden dentro del diccionario
-            print(suborden['part_id'])
             # poner estado de suborden como exit
             OrdersInProcessDictionary[key]['orden'][abs(int(suborden[0]['part_id'][-(index):]))]['status'] = STATES[3]
             if (suborden[2]):
@@ -351,7 +351,6 @@ def cookFood(taquero, suborder, key, index):
     who = "taquero" + str(taquero.id)
     # Sleep default por hacer un taco
     sleep(1)
-
     # Variables necesarias para actualizar las acciones de la orden
     index = suborder['part_id'].find('-')
     key = int(suborder['part_id'][:index])
@@ -373,24 +372,59 @@ def cookFood(taquero, suborder, key, index):
         
 
     taquero.tacoCounter += 1
-    print(suborder['part_id'])
     # hacer menos menos a la suborden de dicccionario en la variable de tacosRestantes
     OrdersInProcessDictionary[key]['orden'][abs( int(suborder['part_id'][-(index):]))]['remaining_tacos'] -=1
 
-def sharedTaqueroMethod(Taquero):
-    taque1 = Taquero.taquero1
-    taque2 = Taquero.taquero2
-    # QOP 
-    # taquero.FLAG si un taquero esta haciendo ordenes pequenias
-        # SI HAY ALGUIEN
-            # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
-            # SI EL QOP ESTA VACIO SE CAMBIA SU FLAG PARA HACER ORDENES DEL QOGH
 
-        # NO HAY NADIE
-            # SE ESPERA LA ORDEN A QUE ALGUNO DE LOS DOS TAQUEROS TERMINE DE HACER SU OCTAVO Y A DICHO
-            #    TAQUERO SE LE ASIGNA EL FLAG DE HACER LAS ORDENES PEQUENIAS
-    
-    pass
+parallel_on_same_queue = threading.Lock()
+parallel_on_different_queues = threading.Lock()
+
+def sharedTaqueroMethod(Taquero, instance):
+    who = "Taquero {0}".format(instance.id)
+    while (True):    
+        if parallel_on_different_queues.locked() == False:
+            
+            # <-- LOCKING
+            if (len(Taquero.QOGH) > 0):
+                parallel_on_different_queues.acquire()
+            
+            
+            while(len(Taquero.QOP) > 0):
+                print(f"{who} hace orden pequeña")
+
+                parallel_on_same_queue.acquire() # cuando tome algo del qop hago antes un acquire
+                subordenP = Taquero.QOP.pop()
+                parallel_on_same_queue.release() # cuando ya lo tenga le hago release para que el otro tome la siguiente orden pequenia
+
+                # toda la logica de hacer la suborden
+                # indice para identificar a la suborden dentro del diccionario
+                index = subordenP['part_id'].find('-')
+                # llave de la orden a la que pertenece
+                key = int(subordenP['part_id'][:index])
+                ordenCompleta = OrdersInProcessDictionary[key]
+                responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOP)".format(subordenP['part_id']))
+                print("Suborden {0} en proceso (QOP)".format(subordenP['part_id']))
+                for taco in range(subordenP['quantity']):
+                    # se hace cada taco
+                    cookFood(instance, subordenP, key, index)
+            
+            if parallel_on_different_queues.locked():
+                parallel_on_different_queues.release()
+            
+        # <-- UNLOCKING
+        else: 
+            while(len(Taquero.QOGH) > 0):
+                print(f"{who} hace orden grande")
+                #sleep(2)
+        # QOP 
+        # taquero.FLAG si un taquero esta haciendo ordenes pequenias
+            # SI HAY ALGUIEN
+                # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
+                # SI EL QOP ESTA VACIO SE CAMBIA SU FLAG PARA HACER ORDENES DEL QOGH
+            # NO HAY NADIE
+                # SE ESPERA LA ORDEN A QUE ALGUNO DE LOS DOS TAQUEROS TERMINE DE HACER SU OCTAVO Y A DICHO
+                #    TAQUERO SE LE ASIGNA EL FLAG DE HACER LAS ORDENES PEQUENIAS
+
 
 #El chalán rellenará primero el cilantro seguido por la cebolla, el guacamole y por último la salsa.
 # checar tortillas < 50
@@ -496,17 +530,24 @@ def porcentaje(a,b):
     return a / INGREDIENTS_AT_MAX[list(INGREDIENTS_AT_MAX.keys())[b]]
 
 
+
 if __name__ == "__main__":
-    with open('Ordenes.json', 'r') as f:
+    with open('ordersTest.json', 'r') as f:
     #with open('Ordenes.json', 'r') as f:
-        data = json.load(f)
-        f.close()
+       data = json.load(f)
+       f.close()
     
     readJson(data)
+    uno = Thread(target=sharedTaqueroMethod, args=(taqueroAsadaSuadero, taqueroAsadaSuadero.taquero1))
+    dos = Thread(target=sharedTaqueroMethod, args=(taqueroAsadaSuadero, taqueroAsadaSuadero.taquero2))
+
+    uno.start()
+    dos.start()
+
+    uno.join()
+    dos.join()
     #np.save("test.npy", taqueroAsadaSuadero.__dict__)
     
     #sharedTaqueroMethod(taqueroAsadaSuadero)
-    
-    
-    individualTaqueroMethod(taqueroAdobada)   
+    #individualTaqueroMethod(taqueroAdobada)   
 
