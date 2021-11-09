@@ -437,13 +437,15 @@ def sharedTaqueroMethod(Taquero, instance):
             while(len(Taquero.QOGH) > 0 and instance.flag == True):
                 print(f"{who} hace orden grande")
                 Taquero.QOGH.pop()
-                change_flag.acquire()
-                instance.flag = False
-                change_flag.release()
-                #sleep(2)
-            parallel_on_different_queues.release()
+                sleep(1)
+                if (len(Taquero.QOGH)==0):
+                    change_flag.acquire()
+                    instance.flag = False
+                    change_flag.release()
+            if (len(Taquero.QOP)>0):
+                parallel_on_different_queues.release()
         
-        # QOP 
+        # QOP
         
         
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
@@ -541,9 +543,6 @@ def readJson(data):
 
         '''
 
-def nextOrder(qOrders):
-    return qOrders.pop()
-#
 def cliente(SQS1, SQS2, SQS3):
     pass
 

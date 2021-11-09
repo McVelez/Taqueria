@@ -57,7 +57,19 @@
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",
-			"quantity": 4,
+			"quantity": 27,
+			"ingredients": [
+			    "salsa",
+			    "cilantro",
+			    "cebolla"
+			]
+		},
+		{
+			"part_id": "0-5",
+			"type": "taco",
+			"meat": "asada",
+			"status": "open",
+			"quantity": 7,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
