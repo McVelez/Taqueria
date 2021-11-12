@@ -42,7 +42,7 @@
 		},
 		{
 			"part_id": "0-3",
-			"type": "taco",
+			"type": "quesadilla",
 			"meat": "suadero",
 			"status": "open",
 			"quantity": 4,
@@ -66,6 +66,17 @@
 		},
 		{ 
 			"part_id": "0-5",
+			"type": "taco",
+			"meat": "asada",
+			"status": "open",
+			"quantity": 7,
+			"ingredients": [
+			    "salsa",
+			    "cilantro",
+			    "cebolla"
+			]
+		},{ 
+			"part_id": "0-6",
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",

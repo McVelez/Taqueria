@@ -350,6 +350,7 @@ def individualTaqueroMethod(taquero):
 def cookFood(taquero, suborder, key, index):
     who = "taquero" + str(taquero.id)
     # Sleep default por hacer un taco
+    print(f"{who} haciendo un taco de {suborder['part_id']}")
     sleep(1)
     # Variables necesarias para actualizar las acciones de la orden
     index = suborder['part_id'].find('-')
@@ -378,18 +379,17 @@ def cookFood(taquero, suborder, key, index):
 
 parallel_on_same_queue = threading.Lock()
 parallel_on_different_queues = threading.Lock()
-
+quesadillasLock = threading.Lock()
 change_flag = threading.Lock()
 
 def sharedTaqueroMethod(Taquero, instance):
+    stackTaken = {1: False, 2: False}
     while (True):    
         who = "Taquero {0}".format(instance.id)
         if parallel_on_different_queues.locked() == False:
-            
             # <-- LOCKING
             if (len(Taquero.QOGH) > 0):
                 parallel_on_different_queues.acquire()
-
                 change_flag.acquire()
                 # checar que taquero soy 
                 if(Taquero.taquero1 == instance):
@@ -399,16 +399,12 @@ def sharedTaqueroMethod(Taquero, instance):
                     if (Taquero.taquero1.flag == False):
                         instance.flag = True
                 change_flag.release()
-            
-            #print(f"{who} esta aqui")
-            
+            #print(f"{who} esta aqui con {instance.flag} y  longitud {len(Taquero.QOP) }")
             while(len(Taquero.QOP) > 0 and instance.flag == False):
                 print(f"{who} hace orden pequeña")
-
                 parallel_on_same_queue.acquire() # cuando tome algo del qop hago antes un acquire
                 subordenP = Taquero.QOP.pop()
                 parallel_on_same_queue.release() # cuando ya lo tenga le hago release para que el otro tome la siguiente orden pequenia
-
                 # toda la logica de hacer la suborden
                 # indice para identificar a la suborden dentro del diccionario
                 index = subordenP['part_id'].find('-')
@@ -416,11 +412,26 @@ def sharedTaqueroMethod(Taquero, instance):
                 key = int(subordenP['part_id'][:index])
                 ordenCompleta = OrdersInProcessDictionary[key]
                 responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOP)".format(subordenP['part_id']))
+                quesadillasLock.acquire()
+                if (subordenP['type']==TYPES[1]):
+                    if (subordenP['quantity'] <= instance.stackQuesadillas):
+                        instance.stackQuesadillas -= subordenP['quantity']
+                        peticionQuesadillas = (subordenP , instance.id, 1)
+                        queueQuesadillas.append(peticionQuesadillas)
+                        stackTaken[instance.id] = True
+                quesadillasLock.release()
                 print("Suborden {0} en proceso (QOP)".format(subordenP['part_id']))
                 for taco in range(subordenP['quantity']):
                     # se hace cada taco
                     cookFood(instance, subordenP, key, index)
-
+                quesadillasLock.acquire()
+                if subordenP['type']==TYPES[1] and stackTaken == False:
+                    peticionQuesadillas = (subordenP , instance.id, 0)
+                    queueQuesadillas.append(peticionQuesadillas)
+                    responseOrden(key, ordenCompleta, who, "Suborden {0} enviada a quesadillero (QOP)".format(subordenP['part_id']))
+                else:
+                    responseOrden(key, ordenCompleta, who, "Suborden {0} es completada (QOP)".format(subordenP['part_id']))
+                quesadillasLock.release()
                 if len(Taquero.QOGH) > 0: # Si de la nada llegó una orden grande 
                     
                     change_flag.acquire()
@@ -434,16 +445,26 @@ def sharedTaqueroMethod(Taquero, instance):
                     change_flag.release()        
         # <-- UNLOCKING
         else: 
+            print(f"{who} is at QOGH")
             while(len(Taquero.QOGH) > 0 and instance.flag == True):
-                print(f"{who} hace orden grande")
+                print(f"----------{who} hace orden grande----------------")
                 Taquero.QOGH.pop()
                 sleep(1)
-                if (len(Taquero.QOGH)==0):
+                if (len(Taquero.QOP)>0):
                     change_flag.acquire()
-                    instance.flag = False
-                    change_flag.release()
-            if (len(Taquero.QOP)>0):
-                parallel_on_different_queues.release()
+                    if(Taquero.taquero1 == instance):
+                        if (Taquero.taquero2.flag == True):
+                            instance.flag = False
+                            parallel_on_different_queues.release()
+                    else:
+                        if (Taquero.taquero1.flag == True):
+                            instance.flag = False
+                            parallel_on_different_queues.release()
+                    #instance.flag = True
+                    change_flag.release()        
+            #if (len(Taquero.QOP)>0):
+            parallel_on_different_queues.release()
+            instance.flag = False
         # QOP      
         
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
@@ -558,8 +579,8 @@ def porcentaje(a,b):
 
 
 if __name__ == "__main__":
-    with open('ordersTest.json', 'r') as f:
-    #with open('Ordenes.json', 'r') as f:
+    #with open('ordersTest.json', 'r') as f:
+    with open('Ordenes.json', 'r') as f:
        data = json.load(f)
        f.close()
     
