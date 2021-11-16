@@ -480,7 +480,7 @@ def sharedTaqueroMethod(Taquero, instance):
                 ordenCompleta = OrdersInProcessDictionary[key]
                 subordenIndex = abs(int(subordenG['part_id'][-(index):]))
                 responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOGH)".format(subordenG['part_id']))
-                cantTacosPorHacer = math.floor(subordenG['quantity'] / 4)
+                cantTacosPorHacer = math.floor(subordenG['quantity'] / 8)
                 if(OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] / cantTacosPorHacer < 2):
                     cantTacosPorHacer = OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos']
 
@@ -512,9 +512,7 @@ def sharedTaqueroMethod(Taquero, instance):
                         responseOrden(key, ordenCompleta, who, "Suborden {0} es completada".format(subordenG['part_id']))
                     if (len(Taquero.QOGE)>0):
                         print(f"QOGE -----> QOGH  {len(Taquero.QOGE)}")
-                        
                         Taquero.QOGH.append(Taquero.QOGE.pop())
-                        
                 else:
                     print(f"subordenG -----> QOGH, restantes: {OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] }")
                     
