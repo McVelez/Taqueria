@@ -9,84 +9,14 @@
 			"type": "taco",
 			"meat": "asada",
 			"status": "open",
-			"quantity": 14,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		}, 		
-		{
-			"part_id": "0-1",
-			"type": "taco",
-			"meat": "asada",
-			"status": "open",
-			"quantity": 4,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		},
-		{
-			"part_id": "0-2",
-			"type": "taco",
-			"meat": "suadero",
-			"status": "open",
-			"quantity": 26,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		},
-		{
-			"part_id": "0-3",
-			"type": "quesadilla",
-			"meat": "suadero",
-			"status": "open",
-			"quantity": 17,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		},
-		{
-			"part_id": "0-4",
-			"type": "taco",
-			"meat": "asada",
-			"status": "open",
-			"quantity": 15,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		},
-		{ 
-			"part_id": "0-5",
-			"type": "taco",
-			"meat": "asada",
-			"status": "open",
-			"quantity": 7,
-			"ingredients": [
-			    "salsa",
-			    "cilantro",
-			    "cebolla"
-			]
-		},{ 
-			"part_id": "0-6",
-			"type": "taco",
-			"meat": "asada",
-			"status": "open",
-			"quantity": 10,
+			"quantity": 5,
 			"ingredients": [
 			    "salsa",
 			    "cilantro",
 			    "cebolla"
 			]
 		}
+
 	    ]
 	}
 ]
