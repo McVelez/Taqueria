@@ -7,16 +7,42 @@
 		{
 			"part_id": "0-0",
 			"type": "taco",
-			"meat": "asada",
+			"meat": "cabeza",
 			"status": "open",
-			"quantity": 5,
+			"quantity": 8,
 			"ingredients": [
-			    "salsa",
-			    "cilantro",
 			    "cebolla"
 			]
 		}
 
 	    ]
 	}
+	,{
+        "datetime": "2021-09-14 16:15:55.421246",
+        "request_id": 1,
+        "status": "open",
+        "orden": [
+            {
+                "part_id": "1-0",
+                "type": "taco",
+                "meat": "adobada",
+                "status": "open",
+                "quantity": 9,
+                "ingredients": [
+                    "salsa"
+                ]
+            },
+			{
+                "part_id": "1-1",
+                "type": "taco",
+                "meat": "adobada",
+                "status": "open",
+                "quantity": 10,
+                "ingredients": [
+                    "salsa",
+                    "cebolla"
+                ]
+            }
+        ]
+    }
 ]

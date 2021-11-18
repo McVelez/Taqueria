@@ -1,0 +1,137 @@
+{
+  "0": {
+    "datetime": "2021-09-14 16:15:55.421215",
+    "request_id": 0,
+    "status": "EXIT",
+    "orden": [
+      {
+        "part_id": "0-0",
+        "type": "taco",
+        "meat": "cabeza",
+        "status": "EXIT",
+        "quantity": 8,
+        "ingredients": ["cebolla"],
+        "remaining_tacos": 0
+      }
+    ],
+    "response": [
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.618901",
+        "What": "La suborden 0-0 entra en estado READY",
+        "Time": 5604424197
+      },
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.645872",
+        "What": "La suborden 0-0 se agreg\u00f3 al queue de Tripa y Cabeza",
+        "Time": 5604424224
+      },
+      {
+        "Who": "Asignador Global",
+        "When": "2021-11-18 13:02:59.647871",
+        "What": "Suborden 0-0 agregada a QOP de taquero taqueroIndividual",
+        "Time": 5604424226
+      },
+      {
+        "Who": "Taquero 3",
+        "When": "2021-11-18 13:02:59.862769",
+        "What": "Suborden 0-0 en proceso (QOP)",
+        "Time": 5604424441
+      },
+      {
+        "Who": "Taquero 3",
+        "When": "2021-11-18 13:03:08.537155",
+        "What": "Suborden 0-0 es completada (QOP)",
+        "Time": 5604433115
+      }
+    ]
+  },
+  "1": {
+    "datetime": "2021-09-14 16:15:55.421246",
+    "request_id": 1,
+    "status": "EXIT",
+    "orden": [
+      {
+        "part_id": "1-0",
+        "type": "taco",
+        "meat": "adobada",
+        "status": "EXIT",
+        "quantity": 9,
+        "ingredients": ["salsa"],
+        "remaining_tacos": 0
+      },
+      {
+        "part_id": "1-1",
+        "type": "taco",
+        "meat": "adobada",
+        "status": "EXIT",
+        "quantity": 10,
+        "ingredients": ["salsa", "cebolla"],
+        "remaining_tacos": 0
+      }
+    ],
+    "response": [
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.648870",
+        "What": "La suborden 1-0 entra en estado READY",
+        "Time": 5604424227
+      },
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.648870",
+        "What": "La suborden 1-0 se agreg\u00f3 al queue de Adobada",
+        "Time": 5604424228
+      },
+      {
+        "Who": "Asignador Global",
+        "When": "2021-11-18 13:02:59.649870",
+        "What": "Suborden 1-0 agregada a QOP de taquero taqueroIndividual",
+        "Time": 5604424228
+      },
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.650869",
+        "What": "La suborden 1-1 entra en estado READY",
+        "Time": 5604424229
+      },
+      {
+        "Who": "Categorizador",
+        "When": "2021-11-18 13:02:59.651868",
+        "What": "La suborden 1-1 se agreg\u00f3 al queue de Adobada",
+        "Time": 5604424230
+      },
+      {
+        "Who": "Asignador Global",
+        "When": "2021-11-18 13:02:59.652868",
+        "What": "Suborden 1-1 agregada a QOP de taquero taqueroIndividual",
+        "Time": 5604424231
+      },
+      {
+        "Who": "Taquero 0",
+        "When": "2021-11-18 13:02:59.860748",
+        "What": "Suborden 1-0 en proceso (QOP)",
+        "Time": 5604424439
+      },
+      {
+        "Who": "Taquero 0",
+        "When": "2021-11-18 13:03:09.474083",
+        "What": "Suborden 1-0 es completada (QOP)",
+        "Time": 5604434052
+      },
+      {
+        "Who": "Taquero 0",
+        "When": "2021-11-18 13:03:09.506065",
+        "What": "Suborden 1-1 en proceso (QOP)",
+        "Time": 5604434084
+      },
+      {
+        "Who": "Taquero 0",
+        "When": "2021-11-18 13:03:20.271398",
+        "What": "Suborden 1-1 es completada (QOP)",
+        "Time": 5604444850
+      }
+    ]
+  }
+}
