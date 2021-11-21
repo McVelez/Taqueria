@@ -2,6 +2,7 @@ from os import name
 from threading import Thread
 import threading
 import json
+import boto3
 #import queue
 from time import sleep
 import copy
@@ -9,7 +10,10 @@ import math
 import numpy as np
 from collections import deque
 from datetime import datetime, timedelta
-
+from AWS.RoundRobin import SQS_handler
+from AWS.tacos import orderGenerator
+sqs = boto3.client("sqs")
+queue_url = "https://sqs.us-east-1.amazonaws.com/292274580527/sqs_cc106_team_7"
 
 OrdersInProcessDictionary= {}
 STATES = ["REJECTED","READY","RUNNING","EXIT"] 
@@ -47,8 +51,10 @@ class taqueroIndividual:
         self.fan = False
 
     def rest(self):
-        if(self.tacoCounter == 300):
+        if(self.tacoCounter % self.tacosNeededForRest == 0):
             sleep(self.restTime)
+            return True
+        return False
 
 class queues:
     def __init__(self):
@@ -100,8 +106,9 @@ def assignToTaqueroQueue(suborder, key):
         responseOrden(key, orden, who, "La suborden {0} se agregó al queue de Adobada".format(suborder['part_id']))
         globalAssignator(queueAdobada, taqueroAdobada)
 
-
+lockMaxSum = threading.Lock()
 def maxSumOrder(orden, maxQuantity, key, type):
+    lockMaxSum.acquire()
     ordenCompleta = OrdersInProcessDictionary[key]
     isTaco = lambda x: x['type'] == TYPES[type]
     #print(orden,sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ), type)
@@ -110,8 +117,11 @@ def maxSumOrder(orden, maxQuantity, key, type):
         responseOrden(key, ordenCompleta, "Categorizador", "Rechazó orden (Cantidad total excede el limite aceptado)")
         for suborder in orden:
             suborder['status'] = STATES[0]
+        lockMaxSum.release()
         return True
+    lockMaxSum.release()
     return False
+
 
 def calcularMS(DateLlegada, DateAccion):
     from dateutil import parser
@@ -128,8 +138,12 @@ def responseOrden(key, orden, who, what):
         "Time" : calcularMS(orden['datetime'], datetime.now())
         })
 
+lockCategorizar = threading.Lock()
 def categorizador(ordenCompleta,key): # objeto de toda la orden
+    
     who = "Categorizador"
+
+    lockCategorizar.acquire()
     orden = ordenCompleta['orden']
     minQuantityPerSuborder = 1
     maxQuantityPerSuborderTacos = 100
@@ -190,7 +204,10 @@ def categorizador(ordenCompleta,key): # objeto de toda la orden
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[1]
             responseOrden(key, ordenCompleta, who, "La suborden {0} entra en estado READY".format(suborder['part_id']))
             assignToTaqueroQueue(suborder, key)
-    
+
+    lockCategorizar.release()
+
+lockAsign = threading.Lock()
 def globalAssignator(queueNeeded, taqueroInstance):
     who = "Asignador Global"
     # dequeue del queue global
@@ -201,29 +218,37 @@ def globalAssignator(queueNeeded, taqueroInstance):
     # enqueue al queue correpondiente del taquero
     # quantity, type
     # TACOS Y QUESADILLAS
-    
+    lockAsign.acquire()
     where = None
     if(suborder['quantity'] <= 25):
+        while lockInutil.locked()==True:
+            pass
         taqueroInstance.QOP.append(suborder)
         where = 'QOP'
         #print("QOP",taqueroInstance.__dict__['QOP'].pop())
     else:
         if(len(taqueroInstance.QOGE)==0):
             if(len(taqueroInstance.QOGH) == 4):
+                while lockInutil.locked()==True:
+                    pass
                 taqueroInstance.QOGE.append(suborder) 
                 where = 'QOGE'
                 #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())   
             else:
+                while lockInutil.locked()==True:
+                    pass
                 taqueroInstance.QOGH.append(suborder)
                 where = "QOGH"
                 #print("QOGH",taqueroInstance.__dict__['QOGH'].pop())
         else:
+            while lockInutil.locked()==True:
+                pass
             taqueroInstance.QOGE.append(suborder)  
             where = 'QOGE'  
             #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())
     name = taqueroInstance.__class__.__name__
     responseOrden(key, OrdersInProcessDictionary[key], who, "Suborden {0} agregada a {1} de taquero {2}".format(suborder['part_id'],where, name))
-
+    lockAsign.release()
 def quesadillero():
     who = 'quesadillero'
     while True:
@@ -274,6 +299,7 @@ def dispatcher(suborden, key): # suborden es una tupla (sub , taquero.id, 0)
     responseOrden(key, OrdersInProcessDictionary[key], who, "{0} quesadillas agregadas a stack de taquero {1}".format(suborden[0]['quantity'], suborden[1]))
     
 lockInutil = threading.Lock()
+lockGetKeys = threading.Lock()
 def individualTaqueroMethod(taquero):
 
     who = "Taquero " + str(taquero.id)
@@ -282,16 +308,23 @@ def individualTaqueroMethod(taquero):
         # NOTA 2.0 Cuando llegue una suborden de quesadillas, se le tratará como taco (poniendole ingredientes y carne)
         #   y se enviará al quesadillero para que el ponga su quesito y no tenga que regresarlo al tqeuro de nuevo.
         # Copiamos el queue a otro espacio de memoria
+        
+        while lockAsign.locked()==True:
+            pass
+        lockInutil.acquire()
         QOP_copy = copy.deepcopy(taquero.QOP)
         snapshotQOP = []
         # se genera el snapshot al vaciar tnto la copia como el queue original
         # no olvidar agregar llamada a quesadillero para cuando no haya suficientes
         while (len(QOP_copy)>0):
+            while lockAsign.locked()==True:
+                pass
             subor = QOP_copy.pop() 
             snapshotQOP.append(subor)
             taquero.QOP.pop()
         # se iteran las subordenes del snapshot
         snapshotQOP = snapshotQOP[::-1]
+        lockInutil.release()
         for sub in snapshotQOP:
             # indice para identificar a la suborden dentro del diccionario
             index = sub['part_id'].find('-')
@@ -314,6 +347,9 @@ def individualTaqueroMethod(taquero):
             for taco in range(sub['quantity']):
                 # se hace cada taco
                 cookFood(taquero, sub, key, index)
+                if taquero.rest():
+                    # Si el taquero si descanso agregarlo como accion en nuestra Respuesta
+                    responseOrden(key, ordenCompleta, who, "El taquero {0} ha descansado".format(taquero.id))
             if sub['type']==TYPES[1] and stackTaken == False:
                 peticionQuesadillas = (sub , taquero.id, 0)
                 queueQuesadillas.append(peticionQuesadillas)
@@ -329,13 +365,18 @@ def individualTaqueroMethod(taquero):
             if len(taquero.QOGH)>0:
                 # Logica de preparacion de cada taco de cada suborden grande dentro del QOGH
                 subordenG = taquero.QOGH.pop()
+                
+                lockGetKeys.acquire()
                 index = subordenG['part_id'].find('-')
                 key = int(subordenG['part_id'][:index])
                 ordenCompleta = OrdersInProcessDictionary[key]
-                
+                lockGetKeys.release()
                 responseOrden(key, ordenCompleta, who, "Suborden {0} en proceso (QOGH)".format(subordenG['part_id']))
                 
-                subordenIndex = abs(int(subordenG['part_id'][-(index):]))
+                
+                values = subordenG['part_id'].split('-') 
+                subordenIndex = int(values[-1:][0])
+                
                 cantTacosPorHacer = math.floor(subordenG['quantity'] / 4)
                 # En base al siguiente condicional aseguramos que cada suborden siempre sea completada en exactamente 4 repeticiones
                 if(OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] / cantTacosPorHacer < 2):
@@ -344,9 +385,10 @@ def individualTaqueroMethod(taquero):
                 # Por aqui va lo de agregar RUNNING al diccionario de los estados
       
                 for tacos in range(cantTacosPorHacer): 
-                    rest = cookFood(taquero, subordenG, key, index )
-                    if rest:
-                        taquero.rest()
+                    cookFood(taquero, subordenG, key, index )
+                    if taquero.rest(): # Esta funcion se llama y el taquero decide si es momento de descansar en base a la cantidad de tacos que lleva
+                        responseOrden(key, ordenCompleta, who, "El taquero {0} ha descansado".format(taquero.id))
+
                 # Logica de actualizacion de diccionario y revision de subordenes grandes completadas
                 if (OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] == 0):
                     if subordenG['type'] == TYPES[TYPES.index('quesadilla')]:
@@ -360,42 +402,57 @@ def individualTaqueroMethod(taquero):
                         taquero.QOGH.append(taquero.QOGE.pop())
                 else:
                     taquero.QOGH.append(subordenG)
-        break
 
 i = 0
+
+lockHacerTaco = threading.Lock()
 def cookFood(taquero, suborder, key, index):
     global i
     who = "taquero" + str(taquero.id)
     # Sleep default por hacer un taco
-    print(f"{who} haciendo un taco de {suborder['part_id']}, lleva: {i+1}")
+    print(f"{who} haciendo un taco de {suborder['part_id']}, la taqueria lleva: {i+1}")
     i+=1
+
+    # El taquero se tarda 1 segundo en hacer un taco
     sleep(1)
     # Variables necesarias para actualizar las acciones de la orden
-    index = suborder['part_id'].find('-')
-    key = int(suborder['part_id'][:index])
+    lockHacerTaco.acquire()
+    # Objeto que representa la orden padre de la suborden actual
     ordenCompleta = OrdersInProcessDictionary[key]
+
+    #print(list(OrdersInProcessDictionary[key]['orden'][abs( int(suborder['part_id'][-(index):]))].keys()))
+    
+    # Boolenao que limita la cantidad de responses agregadas al diccionario en espera de ingrediente rellenado por el chalan
     First = False
     while(taquero.fillings['tortillas'] == 0):
+        # En caso de que no se tengan tortillas el taquero se espera en este while hasta que se rellenen
         if (First==False):
             responseOrden(key, ordenCompleta, who, "Suborden {0} en espera de tortillas".format(suborder['part_id']))
             First = True
     
+    # Resta de los fillings que contiene el taco y en caso de que no se tengan fillings el taquero se espera a que sean rellenados
     for ing in suborder['ingredients']:
         First = False
         while (taquero.fillings[ing] == 0):
             if (First==False):
                 responseOrden(key, ordenCompleta, who, "Suborden {0} en espera de que el chalan rellene ingrediente {1}".format(suborder['part_id'], ing))
                 First = True
-        #sleep(TAQUERO_WAITING_TIME[ing])
-        #print("ingrediente:",ing)
+        # SLEEP INGREDIENTE!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #sleep(TAQUERO_WAITING_TIME[ing])  
         taquero.fillings[ing] -= 1
     
-    taquero.fillings["tortillas"] -=1
-        
-
+    # Siempre que el taquero hace un taco se utiliza una tortilla y el counter del taquero incrementa
+    taquero.fillings["tortillas"] -=1        
     taquero.tacoCounter += 1
-    # hacer menos menos a la suborden de dicccionario en la variable de tacosRestantes
-    OrdersInProcessDictionary[key]['orden'][abs( int(suborder['part_id'][-(index):]))]['remaining_tacos'] -=1
+    
+    # Restamos la cantidad de restantes de tacos por uno
+    # 14-2
+    values = suborder['part_id'].split('-') 
+    indexNuevo = int(values[-1:][0])
+    
+    OrdersInProcessDictionary[key]['orden'][indexNuevo]['remaining_tacos'] -=1
+
+    lockHacerTaco.release()
 
 parallel_on_same_queue = threading.Lock()
 parallel_on_different_queues = threading.Lock()
@@ -453,6 +510,8 @@ def sharedTaqueroMethod(Taquero, instance):
                         # se hace cada taco
                         cookPeque.acquire()
                         cookFood(instance, subordenP, key, index)
+                        if instance.rest(): # El taquero que haya hecho el taco revisa si es necesario descansar
+                            responseOrden(key, ordenCompleta, who, "El taquero {0} ha descansado".format(instance.id))
                         cookPeque.release()
                     quesadillasLock.acquire()
                     if subordenP['type']==TYPES[1] and stackTaken == False:
@@ -516,22 +575,24 @@ def sharedTaqueroMethod(Taquero, instance):
 
                     for tacos in range(cantTacosPorHacer): 
                         cookGrande.acquire()
-                        rest = cookFood(instance, subordenG, key, index )
+                        cookFood(instance, subordenG, key, index)
+                        if instance.rest(): # El taquero que haya hecho el taco revisa si es necesario descansar
+                            responseOrden(key, ordenCompleta, who, "El taquero {0} ha descansado".format(instance.id))
                         cookGrande.release()
                         if (len(Taquero.QOP)>0):
                             change_flag.acquire()
                             if(Taquero.taquero1 == instance):
                                 if (Taquero.taquero2.flag == True):
                                     instance.flag = False
-                                    parallel_on_different_queues.release()
+                                    if parallel_on_different_queues.locked():
+                                        parallel_on_different_queues.release()
                             else:
                                 if (Taquero.taquero1.flag == True):
                                     instance.flag = False
-                                    parallel_on_different_queues.release()
+                                    if parallel_on_different_queues.locked():
+                                        parallel_on_different_queues.release()
                             #instance.flag = True
-                            change_flag.release()      
-                        if rest:
-                            instance.rest()
+                            change_flag.release()
                     appendQOGH.acquire()
                     if (OrdersInProcessDictionary[key]['orden'][subordenIndex]['remaining_tacos'] == 0):
                         if subordenG['type'] == TYPES[TYPES.index('quesadilla')]:
@@ -555,11 +616,13 @@ def sharedTaqueroMethod(Taquero, instance):
                 if(Taquero.taquero1 == instance):
                     if (Taquero.taquero2.flag == True):
                         instance.flag = False
-                        parallel_on_different_queues.release()
+                        if parallel_on_different_queues.locked():
+                            parallel_on_different_queues.release()
                 else:
                     if (Taquero.taquero1.flag == True):
                         instance.flag = False
-                        parallel_on_different_queues.release()
+                        if parallel_on_different_queues.locked():
+                            parallel_on_different_queues.release()
                 #instance.flag = True
                 change_flag.release()  
             else:
@@ -570,9 +633,7 @@ def sharedTaqueroMethod(Taquero, instance):
             if parallel_on_different_queues.locked():   
                 parallel_on_different_queues.release()
                 #instance.flag = False
-
         # QOP      
-        
         # taquero.FLAG si un taquero esta haciendo ordenes pequenias
             # SI HAY ALGUIEN
                 # ESE TAQUERO SE ENCARGA DE CONTINUAR SACANDO COSAS DEL QOP Y HACIENDOLAS
@@ -607,21 +668,22 @@ def chalanArriba():
         fillingsList[1] = [ (porcentaje(tupleInfo[0], fillingsList[1].index(tupleInfo)), tupleInfo[1]) for tupleInfo in fillingsList[1] ]
         if min(fillingsList[0]) >= min(fillingsList[1]):
             do = min(fillingsList[1])
-            if do == 1.0:
-                continue
-            which = list(taqueroAsadaSuadero.taquero1.__dict__['fillings'])[do[1]]
-            taqueroAsadaSuadero.taquero1.fillings[which] = INGREDIENTS_AT_MAX[which]
-            # PREGUNTAR SI TENEMOS QUE NOTIFICAR
-            print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero1.id))
-            sleep(CHALAN_WAITING_TIME[which])
-            print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero1.id))
+            if do[0] < 1.0:
+                
+                which = list(taqueroAsadaSuadero.taquero1.__dict__['fillings'])[do[1]]
+                taqueroAsadaSuadero.taquero1.fillings[which] = INGREDIENTS_AT_MAX[which]
+                # PREGUNTAR SI TENEMOS QUE NOTIFICAR
+                print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero1.id))
+                sleep(CHALAN_WAITING_TIME[which])
+                print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero1.id))
         else:
             do = min(fillingsList[0])
-            if do == 1.0:
-                continue
-            which = list(taqueroAdobada.__dict__['fillings'])[do[1]]
-            taqueroAdobada.fillings[which] = INGREDIENTS_AT_MAX[which]
-            sleep(CHALAN_WAITING_TIME[which])
+            if do[0] < 1.0: 
+                which = list(taqueroAdobada.__dict__['fillings'])[do[1]]
+                taqueroAdobada.fillings[which] = INGREDIENTS_AT_MAX[which]
+                print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroAdobada.id))
+                sleep(CHALAN_WAITING_TIME[which])
+                print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroAdobada.id))
             
 def chalanAbajo():
     
@@ -635,21 +697,23 @@ def chalanAbajo():
         fillingsList[1] = [ (porcentaje(a[0], fillingsList[1].index(a)), a[1]) for a in fillingsList[1] ]
         if min(fillingsList[0]) >= min(fillingsList[1]):
             do = min(fillingsList[1])
-            if do == 1.0:
-                continue
-            which = list(taqueroAsadaSuadero.taquero2.__dict__['fillings'])[do[1]]
-            taqueroAsadaSuadero.taquero2.fillings[which] = INGREDIENTS_AT_MAX[which]
-            # PREGUNTAR SI TENEMOS QUE NOTIFICAR
-            print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero2.id))
-            sleep(CHALAN_WAITING_TIME[which])
-            print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero2.id))
+            if do[0] < 1.0:
+                
+                which = list(taqueroAsadaSuadero.taquero2.__dict__['fillings'])[do[1]]
+                taqueroAsadaSuadero.taquero2.fillings[which] = INGREDIENTS_AT_MAX[which]
+                # PREGUNTAR SI TENEMOS QUE NOTIFICAR
+                print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero2.id))
+                sleep(CHALAN_WAITING_TIME[which])
+                print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroAsadaSuadero.taquero2.id))
         else:
             do = min(fillingsList[0])
-            if do == 1.0:
-                continue
-            which = list(taqueroTripaCabeza.__dict__['fillings'])[do[1]]
-            taqueroTripaCabeza.fillings[which] = INGREDIENTS_AT_MAX[which]
-            sleep(CHALAN_WAITING_TIME[which])
+            if do[0] < 1.0:
+                
+                which = list(taqueroTripaCabeza.__dict__['fillings'])[do[1]]
+                taqueroTripaCabeza.fillings[which] = INGREDIENTS_AT_MAX[which]
+                print("Chalan abajo rellenando {0} para taquero {1}".format(which, taqueroTripaCabeza.id))
+                sleep(CHALAN_WAITING_TIME[which])
+                print("Chalan abajo rellenó {0} para taquero {1}".format(which, taqueroTripaCabeza.id))
        
 joinear = []
 
@@ -657,38 +721,43 @@ def mergeFinishedOrders(keyOrdenPadre):
     # recibimos una key de la suborden que ha sido finalizada
     # queremos revisar el papa y revisar que todos sus hijos esten en estado EXIT
     # si todos estan en EXIT el estado del papa se cambia tambien a EXIT, fin
-    ordenCompleta = OrdersInProcessDictionary[keyOrdenPadre]['orden']
+    objetoOrden = OrdersInProcessDictionary[keyOrdenPadre]
+    ordenCompleta = objetoOrden['orden']
     #isExit = lambda x: x['status'] == STATES[3]
     #print(orden,sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ), type)
     if all([ x['status'] == STATES[3] for x in ordenCompleta] ) :
         OrdersInProcessDictionary[keyOrdenPadre]['status'] = STATES[3]
         with open('response.json', 'w') as f:
             json.dump(OrdersInProcessDictionary, f)
+        print('<<<<<<<<<< Orden {0} terminada >>>>>>>>>>'.format(objetoOrden['request_id']))
+        # ESTO NO VA COMENTADO
+        # POR AHORA LO COMENTO PARA NO TENER MENSAJES NO VISIBLES EN EL QUEUE SI HAY ERRORES
+        # DURANTE EL RUNTIME
+        
+        #handler.delete_message(objetoOrden['message'], objetoOrden, sqs, queue_url)
+
+def readJson(message, orden):
+    #orden['message'] = message['Message']
+    OrdersInProcessDictionary[orden['request_id']] = orden
     
-
-def readJson(data):
-
-    for orden in data:
-        ordenObject = orden['orden'] # es una lista
-        OrdersInProcessDictionary[orden['request_id']] = orden
-        
-        #orden_thread = Thread(tarpop=categorizador, args=(ordenObject, orden['request_id']))
-        #i+=1  
-        #joinear.append(orden_thread)
-        
-        #orden_thread.start()
-        categorizador(orden, orden['request_id'])
-        
-        '''
-        OrdersInProcessDictionary[orden['request_id']] = orden
-        categorizador(ordenObject, orden['request_id'], i)
-
-        '''
-
-def cliente(SQS1, SQS2, SQS3):
-    pass
-
+    #orden_thread = Thread(tarpop=categorizador, args=(ordenObject, orden['request_id']))
+    #i+=1  
+    #joinear.append(orden_thread)
+    #orden_thread.start()
+    categorizador(orden, orden['request_id'])
+    
+sqsLock = threading.Lock()
+def cliente():
+    while True:
+        msg, orden = handler.read_message(sqs, queue_url)
+        if (msg!=None):
+            handler.delete_message(msg, orden, sqs, queue_url)
+            sqsLock.acquire()
+            readJson(msg, orden)
+            sqsLock.release()
 # adobada =0, taquero1 =1, taquero2=2, tripa 3
+handler = SQS_handler()
+orderGen = orderGenerator()
 instanceQueues = queues()
 taqueroAdobada = taqueroIndividual(3, 100, 0)
 taqueroTripaCabeza = taqueroIndividual(3, 100, 3)
@@ -701,15 +770,10 @@ def porcentaje(a,b):
     return a / INGREDIENTS_AT_MAX[list(INGREDIENTS_AT_MAX.keys())[b]]
 
 if __name__ == "__main__":
-    with open('ordersTest.json', 'r') as f:
-    #with open('ordenes.json', 'r') as f:
-       data = json.load(f)
-       f.close()
-    
-    readJson(data)
     chalanArribaThread = Thread(target=chalanArriba, args=())
     chalanAbajoThread = Thread(target=chalanAbajo, args=())
     quesas = Thread(target=quesadillero, args=())
+    sqs_listener = Thread(target=cliente, args=())
     #printJson = Thread(target=mergeFinishedOrders, args=())
     
     # funciones test
@@ -733,6 +797,7 @@ if __name__ == "__main__":
     chalanArribaThread.start()
     chalanAbajoThread.start()
     quesas.start()
+    sqs_listener.start()
 
     # THREAD JOINS
     chalanArribaThread.join()
@@ -743,7 +808,7 @@ if __name__ == "__main__":
     dos.join()
     adobadaThread.join()
     tripaCabezaThread.join()
-    
+    sqs_listener.join()
     #np.save("test.npy", taqueroAsadaSuadero.__dict__)
     
     #sharedTaqueroMethod(taqueroAsadaSuadero)

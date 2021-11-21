@@ -7,9 +7,9 @@
 		{
 			"part_id": "0-0",
 			"type": "taco",
-			"meat": "cabeza",
+			"meat": "tripa",
 			"status": "open",
-			"quantity": 8,
+			"quantity": 7,
 			"ingredients": [
 			    "cebolla"
 			]
@@ -25,7 +25,7 @@
             {
                 "part_id": "1-0",
                 "type": "taco",
-                "meat": "adobada",
+                "meat": "tripa",
                 "status": "open",
                 "quantity": 9,
                 "ingredients": [
@@ -35,9 +35,9 @@
 			{
                 "part_id": "1-1",
                 "type": "taco",
-                "meat": "adobada",
+                "meat": "tripa",
                 "status": "open",
-                "quantity": 10,
+                "quantity": 20,
                 "ingredients": [
                     "salsa",
                     "cebolla"

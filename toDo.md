@@ -1,8 +1,7 @@
 # to do
 <ul>
-    <li>Agregar los queues (SQS)</li>
     <li>Visualizador D:</li>
-    <li>Response de diccionario</li>
+    <li>Response de diccionario (hacia SQS)</li>
     <li>  <b>Preguntar qué se hace con las ordenens si el visibility timeout se vence !</b> </li>
 </ul>
 <div>
