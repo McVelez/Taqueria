@@ -44,12 +44,11 @@ class taqueroIndividual:
         self.tacoCounter = 0
         self.tacosNeededForRest = tacosNeededForRest
 
-    def activateFan(self):
-        self.fan = True
+    def fan_(self):
+        if (self.tacoCounter % 600 == 0):
+            return True
+        return False
         
-    def deactivateFan(self):
-        self.fan = False
-
     def rest(self):
         if(self.tacoCounter % self.tacosNeededForRest == 0):
             sleep(self.restTime)
@@ -72,6 +71,14 @@ class taco:
     def __init__(self, quantity, tacoDuration) -> None:
         self.quantity = quantity
         self.tacoDuration = tacoDuration
+
+def fanHandler(instance):
+    # deberia de ser un thread 
+    if (instance.fan_()):
+        instance.fan = True
+        sleep(60)
+        instance.fan = False
+    
 
 def checkIfEmpty(suborderList):
     return len(suborderList)==0
