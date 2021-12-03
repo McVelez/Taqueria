@@ -10,7 +10,7 @@ Identificamos la importancia de delimitar lo que se considera como una orden gra
 </div>
 <div>
 <ul>
-    <li>**Dependencias necesarias por instalar para la taquería**</li>
+    <li> **Dependencias necesarias por instalar para la taquería** </li>
     <ul>
         <li> boto3 (1.18.48) - para instalar: pip install boto3 </li>
         <li> requests (2.25.0) - para instalar: pip install requests </li>
