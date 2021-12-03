@@ -1,0 +1,6 @@
+{
+  "0": ["Adobada", 152, 150, 100, 200, 200, 50, 1, false, false],
+  "1": ["Asada y suadero", 42, 150, 100, 200, 200, 50, 5, true, false],
+  "2": ["Asada y suadero", 120, 150, 100, 200, 200, 50, 0, false, false],
+  "3": ["Tripa y cabeza", 9, 150, 100, 200, 200, 50, 3, false, false]
+}

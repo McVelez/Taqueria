@@ -13,7 +13,7 @@ class orderGenerator:
         type = ["taco", "quesadilla"]
         meat = ["asada", "adobada", "suadero", "tripa", "cabeza"]
         fillings = ["cebolla", "cilantro", "salsa", "guacamole"]
-        for x in range(38):
+        for x in range(5):
             taco = {
                 "datetime": str(datetime.now()), 
                 "request_id": x, 

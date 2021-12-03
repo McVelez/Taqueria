@@ -10,6 +10,7 @@ generator = GENERATOR()
 
 
 message = generator.generateOrder()
+
 for orden in message:
     handler.write_message(orden, sqs, queue_url)
 '''

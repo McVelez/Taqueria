@@ -1,0 +1,62 @@
+.table-refresh,
+.table-tacos,
+.table-quesadillero{
+    min-width: 480px;
+    max-width: 1000px;
+    font-size: 15px;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.metadata_table, 
+.metadata_table_Q,
+.metadata_table_C{
+    border-collapse: collapse;
+    width: 100%;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid #009578;
+}
+
+.tacos_table_ {
+    border-collapse: collapse;
+    width: 100%;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid #009578;
+}
+
+.metadata_table thead tr,
+.metadata_table_Q thead tr,
+.metadata_table_C thead tr,
+.tacos_table_ thead tr{
+    background: #009578;
+    color: #ffffff;
+}
+
+.metadata_table th,
+.metadata_table td,
+.metadata_table_Q th,
+.metadata_table_Q td,
+.metadata_table_C th,
+.metadata_table_C td,
+.tacos_table_ th,
+.tacos_table_ td{
+    text-align: left;
+    padding: 9px 18px;
+    font-weight: normal;
+}
+
+.metadata_table tbody tr:nth-last-of-type(even),
+.metadata_table_C tbody tr:nth-last-of-type(even),
+.metadata_table_Q tbody tr:nth-last-of-type(even),
+.tacos_table_ tbody tr:nth-last-of-type(even){
+    background: #eeeeee;
+}
+
+.cell[v=true]:after{
+    background: rgb(100, 173, 26);
+}
+
+
+.tacos_table_ tbody {
+  height: 350px;
+  overflow: auto;
+}
