@@ -11,11 +11,14 @@ async function update(root) {
         for (const h of headers){
             table.querySelector("thead tr").insertAdjacentHTML("beforeend", `<th> ${ h } </th>`);
         }
-        
+        taqueros = {0:"Adobada", 1:"Asada y suadero", 2:"Asada y suadero", 3: "Tripa y cabeza"};
         for (const row in data){
+            row[0] = taqueros[row[0]]
+
             table.querySelector("tbody").insertAdjacentHTML("beforeend",`
                 <tr>
-                    ${ data[row].map(col => `<td class="cell" v = ${ col } > ${ col } </td>`).join("") }
+                    ${ data[row].map(col => 
+                        `<td> ${ col } </td>`).join("") }
                 </tr>
             `);
         }

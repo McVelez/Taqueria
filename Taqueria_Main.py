@@ -6,7 +6,7 @@ from time import sleep
 import math
 from collections import deque
 from datetime import datetime
-
+from dateutil import parser
 # Las siguientes 3 librerias llaman las funciones que permiten realizar la comunicación con el SQS
 from AWS.RoundRobin import SQS_handler
 # Establece comunicación con el mlo encargado de comunicarse con el visualizador (node js)
@@ -67,7 +67,7 @@ class taqueroIndividual:
     # Metodo que verifica si el taquero debe descansar    
     def rest(self):
         # Verifica si el residuo de los tacos hechos sobre los tacos requeridos para descanzar es cero
-        if(self.tacoCounter % self.tacosNeededForRest == 0):
+        if(self.tacoCounter != 0 and self.tacoCounter % self.tacosNeededForRest == 0):
             sleep(self.restTime)
             return True
         return False
@@ -98,61 +98,95 @@ def fan_(taquero):
             sleep(60)
             taquero.fan = False
 
-
+# Función para asignar suborden a su taquero correspondiente
 def assignToTaqueroQueue(suborder, key):
     orden = OrdersInProcessDictionary[key]
     who = "Categorizador"
     
+    # Se obtienen los indices correspondientes a los tipos de carne aceptados por la taquería 
+    # (de este modo se pueden agregar tipos de carne sin tener que modificar muchos elementos del código)
     indexAd = MEATS.index('adobada')
     indexAs = MEATS.index('asada')
     indexTr = MEATS.index('tripa')
     indexCa = MEATS.index('cabeza')
     indexSu = MEATS.index('suadero')
 
-
     # Si carne de tacos de la suborder es tripa o cabeza
     if(suborder['meat'] == MEATS[indexTr] or suborder['meat'] == MEATS[indexCa]):
-        #AGREGAR suborder al queue del taquero de tripa y cabeza
+        # Se agrega suborden al queue del taquero de tripa y cabeza
         queueTripaCabeza.append(suborder)
+        
+        # Se le regresa al response el log de la suborden que se agregó al queue de tripa y cabeza
         responseOrden(key, orden, who, "La suborden {0} se agregó al queue de Tripa y Cabeza".format(suborder['part_id']))
         globalAssignator(queueTripaCabeza, taqueroTripaCabeza)
+    
     # Si carne de tacos de la suborder es asada o suadero    
     if(suborder['meat'] == MEATS[indexAs] or suborder['meat'] == MEATS[indexSu]):
-        #AGREGAR suborder al queue de los taqueros de asada
+        # Se agrega suborden al queue de los taqueros de asada
         queueAsadaSuadero.append(suborder)
+        
+        # Se le regresa al response el log de la suborden que se agregó al queue de asada y suadero
         responseOrden(key, orden, who, "La suborden {0} se agregó al queue de Asada y suadero".format(suborder['part_id']))
         globalAssignator(queueAsadaSuadero, taqueroAsadaSuadero)
+    
     # Si carne de tacos de la suborder es adobada    
     if(suborder['meat'] == MEATS[indexAd]):
-        #AGREGAR suborder al queue de Adobada
+        # Se agrega suborden al queue de Adobada
         queueAdobada.append(suborder)
+        
+        # Se le regresa al response el log de la suborden que se agregó al queue de adobada
         responseOrden(key, orden, who, "La suborden {0} se agregó al queue de Adobada".format(suborder['part_id']))
         globalAssignator(queueAdobada, taqueroAdobada)
 
+# Se crea el lock para evitar concurrencias en el cálculo de sumas
 lockMaxSum = threading.Lock()
+
+# Se define la fucnión para calcular la suma de tacos y/o quesadillas de la orden
+# recibiendo la orden, la cnatidad permitida, la llave dentro del diccionario y el tipo (tacos o quesadillas))
 def maxSumOrder(orden, maxQuantity, key, type):
+    # Se adquiere el lock 
     lockMaxSum.acquire()
+    
+    # Se obtiene la orden del diccionario
     ordenCompleta = OrdersInProcessDictionary[key]
+    
+    # Se define una 'función' que verifique si el tipode determinada suborden es el requeridoo por la llamada a la función
     isTaco = lambda x: x['type'] == TYPES[type]
-    #print(orden,sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ), type)
+    
+    # Se obtiene la suma de tacos y/o quesadillas para identificar que no supere el maximo de quesadillas o tacos de toda la orden
     if sum( [ x['quantity'] if isTaco(x) else 0 for x in orden] ) > maxQuantity:
+        # Si sí superan entonces se rechaza toda la orden
         OrdersInProcessDictionary[key]['status'] = STATES[0]
+        
+        # Se le regresa al response el log del rechazo de la orden que sobrepasó la cantidad total del límite aceptado
         responseOrden(key, ordenCompleta, "Categorizador", "Rechazó orden (Cantidad total excede el limite aceptado)")
+        
+        # Todas las subordenes que acompañan a dicha orden rechazada también son establecidas como REJECTED
         for suborder in orden:
             suborder['status'] = STATES[0]
         lockMaxSum.release()
+
+        # Se regresa True si se supero el limite establecido
         return True
     lockMaxSum.release()
+    
+    # Si las cantidades de dicha orden entran dentro de los limites establecidos se regresa False
     return False
 
+# Se define la función para calcular los milisegundos de diferencia entre dos fechas dadas
 def calcularMS(DateLlegada, DateAccion):
-    from dateutil import parser
+    # Se parsean las fechas para realizar una resta y conversión a milisegundos
     date1 = parser.parse(str(DateAccion))
     date2 = parser.parse(DateLlegada)
     ms = int((date1 - date2).total_seconds() * 1000)
+
+    # Se regresa el total de milisegundos
     return ms
 
+# Se define la función para construir y añadir la respuesta de cada acción realizada respecto a cada orden
 def responseOrden(key, orden, who, what):
+    # Se añade a la respuesta los parámetros recibidos en forma de diccionario
+    # calculando el tiempo actual de respuesta
     OrdersInProcessDictionary[key]['response'].append({
         "Who" : who,
         "When" : str(datetime.now()) ,
@@ -160,119 +194,175 @@ def responseOrden(key, orden, who, what):
         "Time" : calcularMS(orden['datetime'], datetime.now())
         })
 
+# Se instancia el lock encargado de verificar que no existan accesos que cambien la asignación
+# de una orden por context switch
 lockCategorizar = threading.Lock()
-def categorizador(ordenCompleta,key): # objeto de toda la orden
-    
+
+# Se define la función encaragda de realizar la categorización de las subordenes a su respectivo tipo de carne
+# aceptar o recharzarlas, receibiendo la orden completa y su respectiva llave dentro del diccionario de ordenes
+def categorizador(ordenCompleta,key):
     who = "Categorizador"
 
+    # Se adquiere el lock
     lockCategorizar.acquire()
+    
+    # Se obtienen las subórdenes componentes de la orden completa
     orden = ordenCompleta['orden']
+    
+    # Se crean las siguientes variables que definen las limitaciones y consideraciones que se realizan para cada suborden y orden
+    # de quesadillas y de tacos
     minQuantityPerSuborder = 1
     maxQuantityPerSuborderTacos = 100
-    maxQuantityPerSuborderQuesadillas = 50
+    maxQuantityPerSuborderQuesadillas = 35
     maxQuantityPerOrderTacos = 400
-    maxQuantityPerOrderQuesadillas = 100
+    maxQuantityPerOrderQuesadillas = 70
+    
+    # Se inicializa la respuesta de la orden 
     OrdersInProcessDictionary[key]['response'] = []
-    # ESTADOS: REJECTED (0)| READY (1) | RUNNING (2)| EXIT (3)
-    # Check if order is empty
+    
+    # Se verifica que la orden no se encuentre vacía
     if len(orden)==0: 
         OrdersInProcessDictionary[key]['status'] = STATES[0]
+        
+        # Se le regresa al response el log del rechazo de una orden vacía
         responseOrden(key, ordenCompleta, who, "Rechazó orden (orden vacía)")
 
 
-    # suborderes: no empty, 100 > tacos en suborder, 400 > tacos en total de orden
+    # Se verifica que la orden completa cumpla con los requisitos de tamaño de la taqueria para ser aceptada
+    # En primera instancia para quesadillas seguido por tacos
     flag = maxSumOrder(orden, maxQuantityPerOrderQuesadillas, key, 1)
     flag = maxSumOrder(orden, maxQuantityPerOrderTacos, key, 0)
+    
+    # Si alguna de los dos (quesadillas o tacos) viola las restricciones, la orden completa no se acepta
     if flag:
         return
+    
+    # Se itera por las subordenes de la orden aceptada
     for suborder in orden:
+        # NOTA: Si existe cualqueir violación a las restricciones se establece continue para validar la siguiente suborden en caso de existir
 
-        # Check if type is supported
+        # Se obtiene el índice de la subórden dentro de la lista de la órden padre
         index = len(suborder['part_id'].split('-')[1])
         suborderIndex = int(suborder['part_id'][-index:])
+        
+        # Si el tipo de la suborden no es disponible/utilizada por la taquería se descarta
         if suborder['type'] not in TYPES: 
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+            
+            # Se le regresa al response el log del rechazo de una suborden con tipo inexistente
             responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No existe el tipo)".format(suborder['part_id']))
             continue
         
-        if suborder['type'] == TYPES[0]:#taco
-            # Check min and max of suborder
+        # Si el tipo de la suborden es un taco
+        if suborder['type'] == TYPES[0]:
+            # Si el numero de tacos de la suborden supera alguno de los limites establecidos se descarta
             if suborder['quantity'] < minQuantityPerSuborder or suborder['quantity'] > maxQuantityPerSuborderTacos: 
                 OrdersInProcessDictionary[key]['orden'][ suborderIndex ]['status'] = STATES[0]
+                
+                # Se le regresa al response el log del rechazo de una suborden con el límite de tacos excedido
                 responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (Cantidad excede el limite de tacos)".format(suborder['part_id']))
                 continue
         else:
+            # Si el numero de quesadillas de la suborden supera alguno de los limites establecidos se descarta
             if suborder['quantity'] < minQuantityPerSuborder or suborder['quantity'] > maxQuantityPerSuborderQuesadillas: 
                 OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+                
+                # Se le regresa al response el log del rechazo de una suborden con el límite de quesadillas excedido
                 responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (Cantidad excede el limite de quesadillas)".format(suborder['part_id']))
                 continue
-        # Check if meat is supported
+        
+        # Si la carne no es disponible/utilizada por la taquería se descarta dicha suborden 
         if suborder['meat'] not in MEATS: 
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+            
+            # Se le regresa al response el log del rechazo de una suborden con un tipo de carne no aceptada
             responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No acepta esa carne)".format(suborder['part_id']))
             continue
         
-        # Check if ingredients are supported
+        # Si alguno de los ingredientes de la suborden no es disponible/utilizada por la taquería se descarta 
         for ingredient in suborder['ingredients']:
             if ingredient not in INGREDIENTS: 
                 OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[0]
+                
+                # Se le regresa al response el log del rechazo de una suborden con un ingrediente no aceptado
                 responseOrden(key, ordenCompleta, who, "Rechazó suborden {0} (No acepta el ingrediente)".format(suborder['part_id']))
                 break
 
-        #print(suborder['part_id'], suborder['type'], suborder['meat'], suborder['quantity'])
+        # Si el estado de la suborden no es REJECTED se establece en el diccionario de ordenes en proceso la cantidad de tacos restantes,
+        # y se establece el estado de la suborden como READY para posteriormente asignarlo a un queue
         if(suborder['status'] != STATES[0]):
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['remaining_tacos'] = OrdersInProcessDictionary[key]['orden'][suborderIndex]['quantity']
             OrdersInProcessDictionary[key]['orden'][suborderIndex]['status'] = STATES[1]
+            
+            # Se le regresa al response el log del cambio de estado de la suborden a READY
             responseOrden(key, ordenCompleta, who, "La suborden {0} entra en estado READY".format(suborder['part_id']))
+            
+            # Una vez filtrado en base a las condiciones se asigna dicha suborden a un queue
             assignToTaqueroQueue(suborder, key)
 
+    # Se libera el lock
     lockCategorizar.release()
 
+
+# Se crea un lock para asegurar que una suborden no entre a un queue cuando no deba 
 lockAsign = threading.Lock()
 
-
-
+# Se define la función que asigna las subórdenes a los queues respectivos de cada taquero (QOP, QOGH o QOGE)
 def globalAssignator(queueNeeded, taqueroInstance):
     who = "Asignador Global"
-    # dequeue del queue global
+    # Se hace pop de un queue Correspondiente (tripa y cabeza, asada y suadero o adobada)
     suborder = queueNeeded.pop()
+    
+    # Se obtiene la llave de dicha suborden
     key = int(suborder['part_id'].split('-')[0])
-    # enqueue al queue correpondiente del taquero
-    # quantity, type
-    # TACOS Y QUESADILLAS
+
+    # Se adquiere el lock para evitar asignaciones y pops concurrentes
     lockAsign.acquire()
+    
+    # Se establece una variable para determinar el quueue al que se está asignando (necesario para adjuntarlo como respuesta en nuestro diccionario de respuestas)
     where = None
+    
+    # Si la cantidad de tacos a realizar en la suborden es menor o igual a la permitida para 
+    # considerarla una suborden pequeña 
     if(suborder['quantity'] <= 25):
+        # Se verifica que no se esté haciendo un pop en alguna otro acceso al QOP
         while lockPop.locked()==True:
             pass
+        
+        # Se agrega al QOP la suborden
         taqueroInstance.QOP.append(suborder)
         where = 'QOP'
-        #print("QOP",taqueroInstance.__dict__['QOP'].pop())
+        
     else:
-        if(len(taqueroInstance.QOGE)==0):
+        # Si el QOGE está vacío
+        if(len(taqueroInstance.QOGE) == 0):
+            # Si el QOGH está justamente lleno
             if(len(taqueroInstance.QOGH) == 4):
-                while lockPop.locked()==True:
+                # Si no hay espacio en el QOGH entonces se agrega al QOGE
+                while lockPop.locked() == True:
                     pass
                 taqueroInstance.QOGE.append(suborder) 
-                where = 'QOGE'
-                #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())   
+                where = 'QOGE'   
             else:
-                while lockPop.locked()==True:
+                # Si hay espacio en el QOGH se agrega dicha suborden 
+                while lockPop.locked() == True:
                     pass
                 taqueroInstance.QOGH.append(suborder)
                 where = "QOGH"
-                #print("QOGH",taqueroInstance.__dict__['QOGH'].pop())
+                
         else:
-            while lockPop.locked()==True:
+            # Si el QOGE no está vacío entonces tiene subordenes (QOGE y QOGH), por lo que dicha suborden también es agregada a dicho queue
+            while lockPop.locked() == True:
                 pass
             taqueroInstance.QOGE.append(suborder)  
             where = 'QOGE'  
-            #print("QOGE",taqueroInstance.__dict__['QOGE'].pop())
+            
+    # Variable para obtener el nombre del taquero en el que agregó una suborden
     name = taqueroInstance.__class__.__name__
+    
+    # Se le regresa al response el log de la suborden que fue agregada al queue respectivo del taquero
     responseOrden(key, OrdersInProcessDictionary[key], who, "Suborden {0} agregada a {1} de taquero {2}".format(suborder['part_id'],where, name))
     lockAsign.release()
-
-lockQuesa = threading.Lock()
 
 # Se define la función que implementa las funcionalidades del quesadillero
 def quesadillero():
