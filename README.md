@@ -10,21 +10,21 @@ Identificamos la importancia de delimitar lo que se considera como una orden gra
 </div>
 <div>
 <ul>
-    <li>**Dependencias necesarias por instalar para la taquería**</li>
+    <li><h2>Dependencias necesarias por instalar para la taquería</h2></li>
     <ul>
         <li> boto3 (1.18.48) - para instalar: pip install boto3 </li>
         <li> requests (2.25.0) - para instalar: pip install requests </li>
     </ul>
-    <li> **Dependencias necesarias por instalar para el visualizador**</li>
+    <li> <h2>Dependencias necesarias por instalar para el visualizador</h2> </li>
     <ul>
         <li>node (14.4) - node https://nodejs.org/en/ </li>
         <li>body-parser (1.19.0) - para instalar: npm install body-parser</li>
         <li>express (4.17.1) - para instalar: npm install nodemon</li>
         <li>nodemon (2.0.15) - para instalar: npm install nodemon</li>
     </ul>
-    <li> El archivo de _Taqueria_Main.py_ es el archivo principal utiliado para ejecutar/poner en función la taquería. (Siempre y cuando el SQS del cual se obtienen las subórdenes contenga mensajes) </li>
-    <li> El resultado generado de la taquería es un archivo llamado _response.json_ que constantemente es actualizado conforme se van realizando acciones y cambios de valores a las órdenes leídas del SQS. </li>
-    <li> El visualizador se encuentra en la carpeta homónima, puara hacer uso de él solamente es necesario abrir dicha carpeta en la terminal y ejectur lo siguiente: _npm run dev_, después de lo cual solo es necesario dirigirse al siguiente url en el navegador: _ http://localhost:3001/ _ </li>
+    <li> El archivo de <i>Taqueria_Main.py</i> es el archivo principal utiliado para ejecutar/poner en función la taquería. (Siempre y cuando el SQS del cual se obtienen las subórdenes contenga mensajes) </li>
+    <li> El resultado generado de la taquería es un archivo llamado <i>response.json</i> que constantemente es actualizado conforme se van realizando acciones y cambios de valores a las órdenes leídas del SQS. </li>
+    <li> El visualizador se encuentra en la carpeta homónima, puara hacer uso de él solamente es necesario abrir dicha carpeta en la terminal y ejectur lo siguiente: <i>npm run dev</i>, después de lo cual solo es necesario dirigirse al siguiente url en el navegador: <i>http://localhost:3001/</i> </li>
 </ul>
 </div>
 
