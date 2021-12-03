@@ -405,6 +405,7 @@ def quesadillero():
                 if (not suborden[2]):
                     # Se actualiza la metadata del visualizador para las quesadillas actuales
                     currentQuesadilla = [suborden[0]['part_id'], suborden[0]['quantity'] - quesadillaCount, len(queueQuesadillas)]
+                    OrdersInProcessDictionary[key]['orden'][index]['status'] = STATES[2]
             currentQuesadilla = []
             
             # Si es un relleno del stack

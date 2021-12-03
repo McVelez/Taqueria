@@ -13,8 +13,8 @@ message = generator.generateOrder()
 
 for orden in message:
     handler.write_message(orden, sqs, queue_url)
-
-'''msg, orden = handler.read_message(sqs, queue_url)
+'''
+msg, orden = handler.read_message(sqs, queue_url)
 while msg is not None:
     handler.delete_message(msg, orden, sqs, queue_url)
     msg, orden = handler.read_message(sqs, queue_url)
