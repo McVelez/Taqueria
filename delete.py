@@ -21,3 +21,5 @@ while msg is not None:
 '''
 print(handler.get_number_messages(sqs, queue_url))
 print('done')
+
+
